@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arritmia Arcade</title>
+<meta name="description" content="Juego retro gratuito para aprender a reconocer 15 arritmias cardiacas en el monitor, contra reloj.">
+<meta name="theme-color" content="#120d26">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta property="og:title" content="Arritmia Arcade">
+<meta property="og:description" content="Aprende a reconocer 15 arritmias jugando contra reloj.">
+<meta property="og:image" content="icons/icon-512.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+/* Layout: gabinete arcade de una columna; el monitor CRT manda, HUD arriba, respuestas abajo. Un solo mundo visual (oscuro) a propósito. */
+:root{
+  color-scheme:dark;
+  --bg:#120d26; --panel:#1d1640; --line:#3c2f86; --shadow:#080514;
+  --ink:#f2edff; --muted:#a79fd0;
+  --phos:#6dffa8; --hot:#ff4d8d; --amber:#ffc94d; --cyan:#58e1ff;
+  --screen:#03140d; --grid:#0f3d28; --ok-bg:#12452c; --bad-bg:#5a1232;
+  --f-display:"Press Start 2P","Courier New",monospace;
+  --f-body:"VT323","Courier New",monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  background-image:radial-gradient(circle at 50% 0,#2a1f5c 0,var(--bg) 60%);
+  background-attachment:fixed;
+  color:var(--ink); font-family:var(--f-body); font-size:20px; line-height:1.2;
+  padding-top:max(18px,env(safe-area-inset-top,0px));padding-bottom:max(18px,env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.cab{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.cab.shake{animation:shake .35s steps(6)}
+@keyframes shake{0%,100%{transform:none}20%{transform:translate(-6px,2px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-4px,-2px)}80%{transform:translate(4px,3px)}}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(15px,4.4vw,28px);color:var(--amber);text-shadow:3px 3px 0 var(--hot);letter-spacing:.02em}
+h1 span{color:var(--cyan);margin-left:.5em}
+.chip{font-family:var(--f-body);font-size:18px;color:var(--muted);background:transparent;border:2px solid var(--line);border-radius:4px;padding:2px 10px;cursor:pointer}
+.chip:hover{color:var(--ink);border-color:var(--cyan)}
+
+.hud{display:grid;grid-template-columns:repeat(5,auto);justify-content:space-between;gap:8px 14px;background:var(--panel);border:3px solid var(--line);border-radius:6px;padding:8px 12px}
+.stat{display:flex;flex-direction:column;gap:4px;min-width:0}
+.lab{font-size:16px;letter-spacing:.08em;color:var(--muted)}
+.val{font-family:var(--f-display);font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums;min-height:18px;display:flex;align-items:center;gap:4px}
+#score{color:var(--amber)} #mult{color:var(--cyan)}
+#mult.pop{animation:pop .3s steps(4)}
+@keyframes pop{50%{transform:scale(1.5)}}
+.hrt{fill:var(--hot);shape-rendering:crispEdges}
+.hrt.off{fill:var(--line)}
+
+.screen{--glow:var(--phos);position:relative;aspect-ratio:25/10;max-width:100%;background-color:var(--screen);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:4% 10%;border:4px solid var(--line);border-radius:10px;overflow:hidden;
+  box-shadow:inset 0 0 40px #000c,0 0 0 4px var(--shadow)}
+.screen.bad{--glow:var(--hot)}
+.screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 2px,#0005 2px 3px)}
+canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;filter:drop-shadow(0 0 5px var(--glow))}
+.tag{position:absolute;top:6px;font-size:18px;color:var(--glow);opacity:.75;letter-spacing:.05em}
+.tl{left:10px}.tr{right:10px}
+.banner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:max-content;max-width:92%;text-align:center;
+  font-family:var(--f-display);font-size:clamp(10px,2.6vw,15px);line-height:1.7;color:var(--amber);background:#000d;border:3px solid var(--amber);padding:10px 14px;z-index:2}
+.banner small{display:block;font-family:var(--f-body);font-size:20px;color:var(--ink)}
+
+.timer{position:relative;height:14px;border:2px solid var(--line);border-radius:3px;background:var(--shadow);overflow:hidden}
+#tbar{height:100%;width:100%;background:var(--phos);transform-origin:left}
+#tbar.low{background:var(--hot)}
+.timer::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 10px,var(--shadow) 10px 12px)}
+
+.panel{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--panel);border:3px solid var(--line);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.card p,.card ul,.card h2,.card h3,.card dl{margin:0}
+.card ul{padding-left:1.1em;display:flex;flex-direction:column;gap:4px}
+.card li::marker{color:var(--hot)}
+h2{font-family:var(--f-display);font-weight:400;font-size:clamp(14px,3.6vw,20px);color:var(--hot)}
+h3{font-family:var(--f-display);font-weight:400;font-size:11px;color:var(--cyan);letter-spacing:.05em}
+.note{font-size:17px;color:var(--muted)}
+kbd{font-family:var(--f-display);font-size:10px;color:var(--amber);border:2px solid var(--line);border-radius:3px;padding:2px 5px}
+
+.btn{align-self:flex-start;font-family:var(--f-display);font-size:14px;color:#1a1200;background:var(--amber);border:0;border-radius:4px;padding:14px 18px;cursor:pointer;box-shadow:4px 4px 0 var(--hot)}
+.btn:hover{background:#ffe08a}
+.btn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--hot)}
+button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
+
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt{display:flex;align-items:center;gap:10px;min-width:0;text-align:left;font-family:var(--f-body);font-size:24px;line-height:1.05;color:var(--ink);
+  background:var(--panel);border:3px solid var(--line);border-radius:4px;padding:10px 12px;min-height:58px;cursor:pointer;box-shadow:4px 4px 0 var(--shadow)}
+.opt:hover{border-color:var(--cyan)}
+.opt:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--shadow)}
+.opt .k{flex:none;font-family:var(--f-display);font-size:10px;color:var(--amber);border:2px solid var(--line);border-radius:3px;padding:4px 5px}
+.opt.done{cursor:default;opacity:.45}
+.opt.done:hover{border-color:var(--line)}
+.opt.ok{opacity:1;background:var(--ok-bg);border-color:var(--phos)}
+.opt.bad{opacity:1;background:var(--bad-bg);border-color:var(--hot)}
+.fb{min-height:3.6em;font-size:22px}
+.fb b{font-family:var(--f-display);font-weight:400;font-size:12px;margin-right:.5em}
+.fb .g{color:var(--phos)} .fb .r{color:var(--hot)} .fb .n{font-family:var(--f-body);font-size:22px;color:var(--amber);margin:0}
+
+.res{display:grid;grid-template-columns:repeat(4,auto);justify-content:space-between;gap:10px 16px}
+.res div{display:flex;flex-direction:column;gap:4px}
+.res dt{font-size:16px;letter-spacing:.08em;color:var(--muted)}
+.res dd{margin:0;font-family:var(--f-display);font-size:13px;color:var(--amber);font-variant-numeric:tabular-nums}
+.rank b{color:var(--cyan);font-weight:400}
+.rec{font-family:var(--f-display);font-size:11px;color:var(--phos);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+#rev b{color:var(--amber);font-weight:400}
+
+@media (max-width:540px){
+  .hud{grid-template-columns:repeat(3,auto)}
+  .opts{grid-template-columns:1fr}
+  .opt{min-height:50px;font-size:22px}
+  .res{grid-template-columns:repeat(2,auto)}
+}
+@media (prefers-reduced-motion:reduce){
+  .cab.shake,#mult.pop,.rec{animation:none}
+}
+.note a{color:var(--cyan)}
+</style>
+
+</head>
+<body>
+<main class="cab" id="cab">
+  <header class="top">
+    <h1>ARRITMIA<span>ARCADE</span></h1>
+    <button class="chip" id="mute" type="button" aria-pressed="false">SONIDO: SÍ</button>
+  </header>
+
+  <div class="hud">
+    <div class="stat"><span class="lab">PUNTOS</span><span class="val" id="score">000000</span></div>
+    <div class="stat"><span class="lab">RÉCORD</span><span class="val" id="best">000000</span></div>
+    <div class="stat"><span class="lab">NIVEL</span><span class="val" id="level">1</span></div>
+    <div class="stat"><span class="lab">RACHA</span><span class="val" id="mult">x1</span></div>
+    <div class="stat"><span class="lab">VIDAS</span><span class="val" id="lives"></span></div>
+  </div>
+
+  <div class="screen" id="screen">
+    <canvas id="cv" role="img" aria-label="Trazo de electrocardiograma en movimiento"></canvas>
+    <div class="tag tl">II · 25 mm/s</div>
+    <div class="tag tr" id="caso">DEMO</div>
+    <div class="banner" id="banner" hidden></div>
+  </div>
+  <div class="timer" aria-hidden="true"><div id="tbar"></div></div>
+
+  <section class="panel" id="pStart">
+    <div class="card">
+      <p>Lee el trazo del monitor y elige el ritmo antes de que se acabe el tiempo.</p>
+      <ul>
+        <li>Tienes 3 vidas. Cada error o tiempo agotado cuesta una.</li>
+        <li>Las rachas multiplican los puntos, hasta x5.</li>
+        <li>Cada 5 aciertos subes de nivel y aparecen ritmos nuevos. Son 15 en total.</li>
+        <li>Teclado: <kbd>1</kbd>–<kbd>4</kbd> para responder, <kbd>Enter</kbd> para continuar.</li>
+      </ul>
+      <button class="btn" id="start" type="button">JUGAR</button>
+      <p class="note">Trazos sintéticos con fines educativos. No sustituyen un ECG real de 12 derivaciones ni sirven para diagnóstico. <a href="privacidad.html">Privacidad</a></p>
+    </div>
+  </section>
+
+  <section class="panel" id="pPlay" hidden>
+    <div class="opts" id="opts"></div>
+    <div class="fb" id="fb" aria-live="polite"></div>
+    <button class="btn" id="next" type="button" hidden>SIGUIENTE</button>
+  </section>
+
+  <section class="panel" id="pOver" hidden>
+    <div class="card">
+      <h2>GAME OVER</h2>
+      <p class="rec" id="rec" hidden>¡NUEVO RÉCORD!</p>
+      <p class="rank">Rango alcanzado: <b id="rank"></b></p>
+      <dl class="res">
+        <div><dt>PUNTOS</dt><dd id="rScore"></dd></div>
+        <div><dt>ACIERTOS</dt><dd id="rOk"></dd></div>
+        <div><dt>MEJOR RACHA</dt><dd id="rStreak"></dd></div>
+        <div><dt>NIVEL</dt><dd id="rLevel"></dd></div>
+      </dl>
+      <div id="rev" class="panel" hidden>
+        <h3>PARA REPASAR</h3>
+        <ul id="revList"></ul>
+      </div>
+      <button class="btn" id="again" type="button">JUGAR OTRA VEZ</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const PI2 = Math.PI * 2;
+
+/* n: nombre, s: corto, c: clave diagnóstica, x: ritmos con los que se confunde, l: nivel en que aparece */
+const R = {
+  sin:  { n: 'Ritmo sinusal normal', s: 'SINUSAL', c: 'Onda P antes de cada QRS, regular, entre 60 y 100 lpm.', x: ['bav1', 'brad', 'taq'], l: 1 },
+  brad: { n: 'Bradicardia sinusal', s: 'BRADICARDIA', c: 'Sinusal y regular, pero a menos de 60 lpm.', x: ['sin', 'bav3', 'mob2'], l: 1 },
+  taq:  { n: 'Taquicardia sinusal', s: 'TAQ. SINUSAL', c: 'Onda P visible antes de cada QRS, a más de 100 lpm.', x: ['tsv', 'sin', 'flu'], l: 1 },
+  asi:  { n: 'Asistolia', s: 'ASISTOLIA', c: 'Línea casi plana, sin actividad eléctrica. No es desfibrilable.', x: ['fv'], l: 1 },
+  fv:   { n: 'Fibrilación ventricular', s: 'FV', c: 'Caos total, sin QRS reconocibles. Es desfibrilable.', x: ['tdp', 'tv', 'asi'], l: 1 },
+  fa:   { n: 'Fibrilación auricular', s: 'FA', c: 'Irregularmente irregular y sin ondas P.', x: ['flu', 'wen', 'ev'], l: 2 },
+  tv:   { n: 'Taquicardia ventricular', s: 'TV', c: 'QRS anchos, regulares y rápidos.', x: ['fv', 'tdp', 'tsv'], l: 2 },
+  tsv:  { n: 'Taquicardia supraventricular', s: 'TSV', c: 'QRS estrechos, muy rápida y regular, sin P visibles.', x: ['taq', 'tv', 'flu'], l: 2 },
+  flu:  { n: 'Flutter auricular', s: 'FLUTTER', c: 'Ondas F en dientes de sierra a unos 300 por minuto.', x: ['fa', 'tsv', 'taq'], l: 3 },
+  ev:   { n: 'Extrasístoles ventriculares', s: 'EV', c: 'Latido ancho y prematuro, seguido de pausa compensadora.', x: ['fa', 'mob2', 'wen'], l: 3 },
+  bav1: { n: 'Bloqueo AV de 1.er grado', s: 'BAV 1.º', c: 'PR largo (más de 200 ms) y constante. Toda P conduce.', x: ['sin', 'wen', 'brad'], l: 3 },
+  wen:  { n: 'Bloqueo AV 2.º Mobitz I', s: 'MOBITZ I', c: 'El PR se alarga latido a latido hasta que una P no conduce (Wenckebach).', x: ['mob2', 'bav1', 'bav3'], l: 4 },
+  mob2: { n: 'Bloqueo AV 2.º Mobitz II', s: 'MOBITZ II', c: 'PR constante y, de pronto, una P sin QRS.', x: ['wen', 'bav3', 'bav1'], l: 4 },
+  bav3: { n: 'Bloqueo AV de 3.er grado', s: 'BAV 3.º', c: 'Las P y los QRS van cada uno a su ritmo: disociación AV.', x: ['mob2', 'wen', 'brad'], l: 4 },
+  tdp:  { n: 'Torsades de pointes', s: 'TORSADES', c: 'TV polimórfica: los QRS giran sobre la línea de base.', x: ['fv', 'tv'], l: 4 }
+};
+const IDS = Object.keys(R);
+
+/* ---------- Síntesis del trazo ---------- */
+const FS = 250, DUR = 60;
+function synth(id) {
+  const n = DUR * FS, y = new Float32Array(n), beats = [];
+  const g = (c, a, s) => {
+    const i0 = Math.max(0, Math.floor((c - 4 * s) * FS)), i1 = Math.min(n - 1, Math.ceil((c + 4 * s) * FS));
+    for (let i = i0; i <= i1; i++) { const d = (i / FS - c) / s; y[i] += a * Math.exp(-0.5 * d * d); }
+  };
+  const P = c => g(c, 0.13, 0.028);
+  const QRS = (t, rr, tAmp = 0.26) => {
+    beats.push(t);
+    g(t - 0.028, -0.09, 0.009); g(t, 1, 0.012); g(t + 0.03, -0.2, 0.011);
+    const k = Math.sqrt(Math.min(rr, 1.1)); g(t + 0.30 * k, tAmp, 0.05 * k);
+  };
+  const WIDE = (t, a = 1) => { beats.push(t); g(t, 0.95 * a, 0.04); g(t + 0.13, -0.6 * a, 0.06); };
+  const sinus = (rr, pr) => { let t = rand(0.1, rr); while (t < DUR) { P(t - pr + 0.01); QRS(t, rr); t += rr * (1 + (Math.random() - 0.5) * 0.03); } };
+  const each = f => { for (let i = 0; i < n; i++) y[i] += f(i / FS); };
+
+  switch (id) {
+    case 'sin': sinus(60 / rand(62, 90), 0.16); break;
+    case 'brad': sinus(60 / rand(38, 50), 0.16); break;
+    case 'taq': sinus(60 / rand(115, 140), 0.14); break;
+    case 'bav1': sinus(60 / rand(55, 68), rand(0.32, 0.40)); break;
+    case 'asi': { const p = rand(0, 6); each(t => 0.015 * Math.sin(PI2 * 0.3 * t + p)); break; }
+    case 'fv': {
+      const p = [rand(0, 6), rand(0, 6), rand(0, 6)];
+      each(t => 0.38 * Math.sin(PI2 * 4.6 * t + 2.2 * Math.sin(PI2 * 0.63 * t + p[0])) * (0.55 + 0.45 * Math.sin(PI2 * 0.23 * t + p[1]))
+        + 0.16 * Math.sin(PI2 * 7.3 * t + p[2] + 1.5 * Math.sin(PI2 * 0.41 * t)));
+      break;
+    }
+    case 'tdp': { const f = rand(3.6, 4.2), p = rand(0, 6); each(t => 0.55 * Math.sin(PI2 * f * t) * Math.sin(PI2 * 0.3 * t + p)); break; }
+    case 'fa': {
+      let t = rand(0.1, 0.6);
+      while (t < DUR) { const rr = rand(0.38, 1.0); QRS(t, rr, 0.16); t += rr; }
+      const p = [rand(0, 6), rand(0, 6), rand(0, 6)];
+      each(t => 0.035 * Math.sin(PI2 * 6.3 * t + p[0]) + 0.025 * Math.sin(PI2 * 8.1 * t + p[1]) + 0.02 * Math.sin(PI2 * 4.7 * t + p[2]));
+      break;
+    }
+    case 'flu': {
+      const ratio = pick([3, 4]), rr = ratio * 0.2;
+      for (let t = 0.11; t < DUR; t += rr) QRS(t, rr, 0.03);
+      each(t => { const ph = (t / 0.2) % 1; return 0.16 * (ph < 0.75 ? 0.5 - ph / 0.75 : (ph - 0.75) / 0.25 - 0.5); });
+      break;
+    }
+    case 'tsv': { const rr = 60 / rand(170, 210); for (let t = rand(0, rr); t < DUR; t += rr) QRS(t, rr, 0.14); break; }
+    case 'tv': { const rr = 60 / rand(150, 200); for (let t = rand(0, rr); t < DUR; t += rr) WIDE(t); break; }
+    case 'ev': {
+      const rr = 60 / rand(62, 80), k = pick([2, 3]); let t = rand(0.2, 0.8), c = 0;
+      while (t < DUR) { P(t - 0.15); QRS(t, rr); c++; if (c % k === 0) { WIDE(t + 0.6 * rr, 1.05); t += 2 * rr; } else t += rr; }
+      break;
+    }
+    case 'wen': {
+      const pp = rand(0.78, 0.92), prs = pick([[0.18, 0.27, 0.36], [0.16, 0.22, 0.29, 0.37]]); let c = rand(0.2, 0.6), k = 0;
+      while (c < DUR) { P(c); if (k < prs.length) QRS(c + prs[k] - 0.01, pp); k = (k + 1) % (prs.length + 1); c += pp; }
+      break;
+    }
+    case 'mob2': {
+      const pp = rand(0.76, 0.9), m = pick([3, 4]); let c = rand(0.2, 0.6), k = 0;
+      while (c < DUR) { P(c); if (k < m - 1) QRS(c + 0.17, pp); k = (k + 1) % m; c += pp; }
+      break;
+    }
+    case 'bav3': {
+      const pp = rand(0.62, 0.75), rr = rand(1.5, 1.8);
+      for (let c = rand(0, pp); c < DUR; c += pp) P(c);
+      for (let t = rand(0.2, rr); t < DUR; t += rr) WIDE(t, 0.8);
+      break;
+    }
+  }
+  for (let i = 0; i < n; i++) y[i] += (Math.random() - 0.5) * 0.012;
+  beats.sort((a, b) => a - b);
+  return { y, beats };
+}
+
+/* ---------- Monitor ---------- */
+const cv = $('cv'), ctx = cv.getContext('2d'), screenEl = $('screen');
+const SEC = 5;               // segundos visibles: 25 cuadros grandes de 0.2 s
+const GREEN = '#6dffa8', RED = '#ff4d8d';
+let W = 360, H = 144;
+function resize() {
+  const cw = screenEl.clientWidth || 360;
+  const s = Math.max(1, Math.round(cw / 400));
+  W = Math.max(200, Math.round(cw / s)); H = Math.round(W * 0.4);
+  cv.width = W; cv.height = H;
+}
+if (window.ResizeObserver) new ResizeObserver(resize).observe(screenEl); else window.addEventListener('resize', resize);
+resize();
+
+let cur = 'sin', buf = synth('sin'), t = SEC + 0.3, bi = 0, traceBad = false;
+function load(id) {
+  cur = id; buf = synth(id); t = SEC + 0.3;
+  bi = 0; while (bi < buf.beats.length && buf.beats[bi] <= t) bi++;
+}
+load('sin');
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  const spp = SEC / W, pen = (t / spp) % W, gap = Math.max(6, W * 0.035);
+  const base = H * 0.62, amp = H * 0.44, y = buf.y;
+  ctx.fillStyle = traceBad ? RED : GREEN;
+  let prev = null, headY = base;
+  for (let x = 0; x < W; x++) {
+    const ahead = (x - pen + W) % W;
+    if (ahead > 0.5 && ahead < gap) { prev = null; continue; }
+    const behind = (pen - x + W) % W, tx = t - behind * spp;
+    const i1 = Math.floor(tx * FS); let i0 = Math.floor((tx - spp) * FS) + 1;
+    if (i0 > i1) i0 = i1;
+    if (i0 < 0 || i1 >= y.length) { prev = null; continue; }
+    let mn = 1e9, mx = -1e9;
+    for (let i = i0; i <= i1; i++) { const v = y[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
+    let top = base - mx * amp, bot = base - mn * amp;
+    const lastY = base - y[i1] * amp;
+    if (prev !== null) { if (prev < top) top = prev; if (prev > bot) bot = prev; }
+    top = Math.max(1, Math.min(H - 3, Math.round(top))); bot = Math.max(top + 2, Math.min(H - 1, Math.round(bot) + 1));
+    ctx.globalAlpha = 1 - 0.6 * (behind / W);
+    ctx.fillRect(x, top, 1, bot - top);
+    prev = lastY;
+    if (behind < 1) headY = Math.max(2, Math.min(H - 3, Math.round(lastY)));
+  }
+  ctx.globalAlpha = 1; ctx.fillStyle = '#ffffff';
+  ctx.fillRect(Math.floor(pen) - 1, headY - 1, 3, 3);
+}
+
+/* ---------- Sonido ---------- */
+let ac = null, muted = false;
+try { muted = localStorage.getItem('arr-mute') === '1'; } catch (e) {}
+function tone(f, d, type = 'square', v = 0.05, when = 0, f2) {
+  if (muted || !ac) return;
+  try {
+    const o = ac.createOscillator(), gn = ac.createGain(), t0 = ac.currentTime + when;
+    o.type = type; o.frequency.setValueAtTime(f, t0);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + d);
+    gn.gain.setValueAtTime(v, t0); gn.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    o.connect(gn); gn.connect(ac.destination); o.start(t0); o.stop(t0 + d + 0.02);
+  } catch (e) {}
+}
+const sfx = {
+  blip: () => tone(880, 0.06, 'square', 0.02),
+  ok: () => { tone(660, 0.08); tone(880, 0.08, 'square', 0.05, 0.08); tone(1320, 0.14, 'square', 0.05, 0.16); },
+  bad: () => tone(220, 0.4, 'sawtooth', 0.07, 0, 60),
+  level: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.12, 'square', 0.05, i * 0.11)),
+  over: () => { tone(440, 0.7, 'sawtooth', 0.06, 0, 90); tone(440, 1.1, 'sine', 0.05, 0.7); }
+};
+function audioOn() {
+  try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch (e) {}
+}
+function paintMute() { $('mute').textContent = 'SONIDO: ' + (muted ? 'NO' : 'SÍ'); $('mute').setAttribute('aria-pressed', String(muted)); }
+$('mute').addEventListener('click', () => { muted = !muted; try { localStorage.setItem('arr-mute', muted ? '1' : '0'); } catch (e) {} paintMute(); audioOn(); });
+paintMute();
+
+/* ---------- Juego ---------- */
+let st = 'start';            // start | play | fb | over
+let score = 0, best = 0, lives = 3, level = 1, streak = 0, bestStreak = 0, ok = 0, total = 0, caseNo = 0;
+let timeMax = 10, timeLeft = 10, missed = new Set(), fbTimer = null;
+try { best = parseInt(localStorage.getItem('arr-best') || '0', 10) || 0; } catch (e) {}
+
+const pad = v => String(v).padStart(6, '0');
+const HP = ['0110110', '1111111', '1111111', '0111110', '0011100', '0001000'];
+function heart(on) {
+  let r = '';
+  HP.forEach((row, yy) => [...row].forEach((c, xx) => { if (c === '1') r += `<rect x="${xx}" y="${yy}" width="1" height="1"/>`; }));
+  return `<svg class="hrt${on ? '' : ' off'}" viewBox="0 0 7 6" width="21" height="18" aria-hidden="true">${r}</svg>`;
+}
+const multOf = s => Math.min(5, 1 + Math.floor(s / 3));
+let lastMult = 1;
+function hud() {
+  $('score').textContent = pad(score); $('best').textContent = pad(Math.max(best, score)); $('level').textContent = level;
+  const m = multOf(streak), el = $('mult'); el.textContent = 'x' + m;
+  if (m !== lastMult) { el.classList.remove('pop'); void el.offsetWidth; if (m > lastMult) el.classList.add('pop'); lastMult = m; }
+  $('lives').innerHTML = [0, 1, 2].map(i => heart(i < lives)).join('');
+  $('lives').setAttribute('aria-label', lives + ' vidas');
+}
+function show(p) { ['pStart', 'pPlay', 'pOver'].forEach(id => { $(id).hidden = id !== p; }); }
+function setBar() {
+  const f = Math.max(0, timeLeft / timeMax), b = $('tbar');
+  b.style.width = (f * 100) + '%'; b.classList.toggle('low', f < 0.3);
+}
+
+function startGame() {
+  audioOn();
+  score = 0; lives = 3; level = 1; streak = 0; bestStreak = 0; ok = 0; total = 0; caseNo = 0; missed = new Set(); cur = null;
+  show('pPlay'); nextRound();
+}
+
+function nextRound() {
+  clearTimeout(fbTimer);
+  caseNo++;
+  const pool = IDS.filter(i => R[i].l <= level), bag = [];
+  pool.forEach(i => { if (i === cur) return; bag.push(i); if (level > 1 && R[i].l === Math.min(level, 4)) bag.push(i); });
+  const id = pick(bag);
+  load(id);
+  const near = shuffle(R[id].x.filter(i => pool.includes(i)));
+  const rest = shuffle(pool.filter(i => i !== id && !near.includes(i)));
+  const opts = shuffle([id, ...near.concat(rest).slice(0, 3)]);
+  $('opts').innerHTML = opts.map((o, i) => `<button class="opt" type="button" data-id="${o}"><span class="k">${i + 1}</span><span>${R[o].n}</span></button>`).join('');
+  $('fb').innerHTML = ''; $('next').hidden = true; $('banner').hidden = true;
+  $('caso').textContent = 'CASO ' + String(caseNo).padStart(2, '0');
+  traceBad = false; screenEl.classList.remove('bad');
+  timeMax = Math.max(4, 11 - level); timeLeft = timeMax; setBar();
+  st = 'play'; hud();
+}
+
+function answer(id) {
+  if (st !== 'play') return;
+  st = 'fb'; total++;
+  const right = id === cur, r = R[cur];
+  document.querySelectorAll('.opt').forEach(b => {
+    b.classList.add('done');
+    if (b.dataset.id === cur) b.classList.add('ok');
+    else if (b.dataset.id === id) b.classList.add('bad');
+  });
+  if (right) {
+    ok++; streak++; bestStreak = Math.max(bestStreak, streak);
+    const pts = (100 + Math.round(100 * Math.max(0, timeLeft) / timeMax)) * multOf(streak);
+    score += pts; sfx.ok();
+    $('fb').innerHTML = `<b class="g">¡CORRECTO! +${pts}</b>${r.c}`;
+    let wait = 1200;
+    const nl = 1 + Math.floor(ok / 5);
+    if (nl > level) {
+      level = nl; wait = 2400; sfx.level();
+      const fresh = IDS.filter(i => R[i].l === level).map(i => R[i].s);
+      $('banner').innerHTML = `NIVEL ${level}<small>${fresh.length ? 'Ritmos nuevos: ' + fresh.join(' · ') : 'Menos tiempo por caso'}</small>`;
+      $('banner').hidden = false;
+    }
+    fbTimer = setTimeout(nextRound, wait);
+  } else {
+    lives--; streak = 0; missed.add(cur); sfx.bad();
+    traceBad = true; screenEl.classList.add('bad');
+    const cab = $('cab'); cab.classList.remove('shake'); void cab.offsetWidth; cab.classList.add('shake');
+    $('fb').innerHTML = `<b class="r">${id ? 'INCORRECTO' : '¡TIEMPO!'}</b>Era <b class="n">${r.n}</b>. ${r.c}`;
+    const nx = $('next'); nx.textContent = lives <= 0 ? 'VER RESULTADO' : 'SIGUIENTE'; nx.hidden = false;
+    try { nx.focus({ preventScroll: true }); } catch (e) {}
+  }
+  hud();
+}
+
+function rankOf(s) {
+  return s < 500 ? 'Estudiante de primer año' : s < 1500 ? 'Interno de pregrado' : s < 3500 ? 'Residente de guardia' : s < 7000 ? 'Cardiólogo' : 'Electrofisiólogo';
+}
+function gameOver() {
+  st = 'over'; load('asi'); traceBad = true; screenEl.classList.add('bad');
+  $('caso').textContent = 'FIN'; $('banner').hidden = true; timeLeft = 0; setBar();
+  const isRec = score > best;
+  if (isRec) { best = score; try { localStorage.setItem('arr-best', String(best)); } catch (e) {} }
+  $('rec').hidden = !isRec;
+  $('rank').textContent = rankOf(score);
+  $('rScore').textContent = pad(score); $('rOk').textContent = ok + '/' + total; $('rStreak').textContent = bestStreak; $('rLevel').textContent = level;
+  $('rev').hidden = missed.size === 0;
+  $('revList').innerHTML = [...missed].map(i => `<li><b>${R[i].n}.</b> ${R[i].c}</li>`).join('');
+  show('pOver'); hud(); sfx.over();
+  try { $('again').focus({ preventScroll: true }); } catch (e) {}
+}
+
+function primary() {
+  if (st === 'start' || st === 'over') startGame();
+  else if (st === 'fb' && !$('next').hidden) { lives <= 0 ? gameOver() : nextRound(); }
+}
+$('start').addEventListener('click', startGame);
+$('again').addEventListener('click', startGame);
+$('next').addEventListener('click', primary);
+$('opts').addEventListener('click', e => { const b = e.target.closest('.opt'); if (b) answer(b.dataset.id); });
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (st === 'play' && e.key >= '1' && e.key <= '4') {
+    const b = document.querySelectorAll('.opt')[+e.key - 1]; if (b) { e.preventDefault(); answer(b.dataset.id); }
+  } else if ((e.key === 'Enter' || e.key === ' ') && document.activeElement.tagName !== 'BUTTON') {
+    e.preventDefault(); primary();
+  }
+});
+
+let prevNow = null;
+function frame(now) {
+  const dt = prevNow === null ? 0 : Math.min(0.05, (now - prevNow) / 1000); prevNow = now;
+  t += dt;
+  if (t > DUR - 0.5) load(cur);
+  while (bi < buf.beats.length && buf.beats[bi] <= t) { if (st === 'play' || st === 'fb') sfx.blip(); bi++; }
+  if (st === 'play') { timeLeft -= dt; setBar(); if (timeLeft <= 0) answer(null); }
+  draw();
+  requestAnimationFrame(frame);
+}
+
+function boot(d) {
+  hud();
+  if (d && d.playing) {
+    score = d.score | 0; lives = d.lives || 3; level = d.level || 1; streak = d.streak | 0; bestStreak = d.bestStreak | 0;
+    ok = d.ok | 0; total = d.total | 0; caseNo = d.caseNo | 0; missed = new Set(d.missed || []); cur = null;
+    show('pPlay'); nextRound();
+  }
+  requestAnimationFrame(frame);
+}
+const hot = window.claude && window.claude.hot;
+try { if (hot && hot.snapshot) hot.snapshot(() => ({ playing: st === 'play' || st === 'fb', score, lives: Math.max(1, lives), level, streak, bestStreak, ok, total, caseNo: Math.max(0, caseNo - 1), missed: [...missed] })); } catch (e) {}
+if (hot && hot.ready) hot.ready(boot); else boot((hot && hot.data) || {});
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>
