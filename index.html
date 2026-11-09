@@ -27,12 +27,13 @@
   --f-body:"VT323","Courier New",monospace;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{
   background:var(--bg);
   background-image:radial-gradient(circle at 50% 0,#2a1f5c 0,var(--bg) 60%);
   background-attachment:fixed;
-  color:var(--ink); font-family:var(--f-body); font-size:20px; line-height:1.2;
+  margin:0; color:var(--ink); font-family:var(--f-body); font-size:20px; line-height:1.2;
   padding-top:max(18px,env(safe-area-inset-top,0px));padding-bottom:max(18px,env(safe-area-inset-bottom,0px));
   padding-left:max(16px,env(safe-area-inset-left,0px));
   padding-right:max(16px,env(safe-area-inset-right,0px));
@@ -113,10 +114,20 @@ button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
 @keyframes blink{50%{opacity:.25}}
 #rev b{color:var(--amber);font-weight:400}
 
+.chips{display:flex;gap:8px;flex-wrap:wrap}
 @media (max-width:540px){
+  body{padding-top:max(10px,env(safe-area-inset-top,0px));padding-bottom:max(10px,env(safe-area-inset-bottom,0px))}
+  .cab{gap:8px}
   .hud{grid-template-columns:repeat(3,auto)}
-  .opts{grid-template-columns:1fr}
-  .opt{min-height:50px;font-size:22px}
+  .playing .top,.playing .rec-stat{display:none}
+  .playing .hud{grid-template-columns:repeat(4,auto);padding:6px 10px}
+  .playing .lab{font-size:14px}
+  .playing .val{font-size:10px;min-height:16px}
+  .opts{gap:8px}
+  .opt{min-height:56px;font-size:20px;padding:6px 8px;box-shadow:3px 3px 0 var(--shadow)}
+  .opt .k{display:none}
+  .fb{font-size:20px;min-height:3.2em}
+  .btn{padding:12px 16px}
   .res{grid-template-columns:repeat(2,auto)}
 }
 @media (prefers-reduced-motion:reduce){
@@ -129,16 +140,19 @@ button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
 <body>
 <main class="cab" id="cab">
   <header class="top">
-    <h1>ARRITMIA<span>ARCADE</span></h1>
-    <button class="chip" id="mute" type="button" aria-pressed="false">SONIDO: SÍ</button>
+    <h1 data-t="title">ARRITMIA<span>ARCADE</span></h1>
+    <div class="chips">
+      <button class="chip" id="lang" type="button">IDIOMA: ES</button>
+      <button class="chip" id="mute" type="button" aria-pressed="false">SONIDO: SÍ</button>
+    </div>
   </header>
 
   <div class="hud">
-    <div class="stat"><span class="lab">PUNTOS</span><span class="val" id="score">000000</span></div>
-    <div class="stat"><span class="lab">RÉCORD</span><span class="val" id="best">000000</span></div>
-    <div class="stat"><span class="lab">NIVEL</span><span class="val" id="level">1</span></div>
-    <div class="stat"><span class="lab">RACHA</span><span class="val" id="mult">x1</span></div>
-    <div class="stat"><span class="lab">VIDAS</span><span class="val" id="lives"></span></div>
+    <div class="stat"><span class="lab" data-t="score">PUNTOS</span><span class="val" id="score">000000</span></div>
+    <div class="stat rec-stat"><span class="lab" data-t="best">RÉCORD</span><span class="val" id="best">000000</span></div>
+    <div class="stat"><span class="lab" data-t="level">NIVEL</span><span class="val" id="level">1</span></div>
+    <div class="stat"><span class="lab" data-t="streak">RACHA</span><span class="val" id="mult">x1</span></div>
+    <div class="stat"><span class="lab" data-t="lives">VIDAS</span><span class="val" id="lives"></span></div>
   </div>
 
   <div class="screen" id="screen">
@@ -151,15 +165,15 @@ button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
 
   <section class="panel" id="pStart">
     <div class="card">
-      <p>Lee el trazo del monitor y elige el ritmo antes de que se acabe el tiempo.</p>
+      <p data-t="intro"></p>
       <ul>
-        <li>Tienes 3 vidas. Cada error o tiempo agotado cuesta una.</li>
-        <li>Las rachas multiplican los puntos, hasta x5.</li>
-        <li>Cada 5 aciertos subes de nivel y aparecen ritmos nuevos. Son 15 en total.</li>
-        <li>Teclado: <kbd>1</kbd>–<kbd>4</kbd> para responder, <kbd>Enter</kbd> para continuar.</li>
+        <li data-t="li1"></li>
+        <li data-t="li2"></li>
+        <li data-t="li3"></li>
+        <li data-t="li4"></li>
       </ul>
-      <button class="btn" id="start" type="button">JUGAR</button>
-      <p class="note">Trazos sintéticos con fines educativos. No sustituyen un ECG real de 12 derivaciones ni sirven para diagnóstico. <a href="privacidad.html">Privacidad</a></p>
+      <button class="btn" id="start" type="button" data-t="play">JUGAR</button>
+      <p class="note" data-t="note"></p>
     </div>
   </section>
 
@@ -172,19 +186,19 @@ button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
   <section class="panel" id="pOver" hidden>
     <div class="card">
       <h2>GAME OVER</h2>
-      <p class="rec" id="rec" hidden>¡NUEVO RÉCORD!</p>
-      <p class="rank">Rango alcanzado: <b id="rank"></b></p>
+      <p class="rec" id="rec" data-t="newRec" hidden>¡NUEVO RÉCORD!</p>
+      <p class="rank"><span data-t="rankLab">Rango alcanzado:</span> <b id="rank"></b></p>
       <dl class="res">
-        <div><dt>PUNTOS</dt><dd id="rScore"></dd></div>
-        <div><dt>ACIERTOS</dt><dd id="rOk"></dd></div>
-        <div><dt>MEJOR RACHA</dt><dd id="rStreak"></dd></div>
-        <div><dt>NIVEL</dt><dd id="rLevel"></dd></div>
+        <div><dt data-t="score">PUNTOS</dt><dd id="rScore"></dd></div>
+        <div><dt data-t="hits">ACIERTOS</dt><dd id="rOk"></dd></div>
+        <div><dt data-t="bestStreak">MEJOR RACHA</dt><dd id="rStreak"></dd></div>
+        <div><dt data-t="level">NIVEL</dt><dd id="rLevel"></dd></div>
       </dl>
       <div id="rev" class="panel" hidden>
-        <h3>PARA REPASAR</h3>
+        <h3 data-t="review">PARA REPASAR</h3>
         <ul id="revList"></ul>
       </div>
-      <button class="btn" id="again" type="button">JUGAR OTRA VEZ</button>
+      <button class="btn" id="again" type="button" data-t="again">JUGAR OTRA VEZ</button>
     </div>
   </section>
 </main>
@@ -216,6 +230,66 @@ const R = {
   tdp:  { n: 'Torsades de pointes', s: 'TORSADES', c: 'TV polimórfica: los QRS giran sobre la línea de base.', x: ['fv', 'tv'], l: 4 }
 };
 const IDS = Object.keys(R);
+
+/* ---------- Idiomas ---------- */
+const EN = {
+  sin:  ['Normal sinus rhythm', 'SINUS', 'P wave before every QRS, regular, 60 to 100 bpm.'],
+  brad: ['Sinus bradycardia', 'BRADYCARDIA', 'Sinus and regular, but below 60 bpm.'],
+  taq:  ['Sinus tachycardia', 'SINUS TACH', 'Visible P wave before every QRS, above 100 bpm.'],
+  asi:  ['Asystole', 'ASYSTOLE', 'Nearly flat line, no electrical activity. Not shockable.'],
+  fv:   ['Ventricular fibrillation', 'VF', 'Total chaos, no recognizable QRS. Shockable.'],
+  fa:   ['Atrial fibrillation', 'AF', 'Irregularly irregular with no P waves.'],
+  tv:   ['Ventricular tachycardia', 'VT', 'Wide, regular, fast QRS complexes.'],
+  tsv:  ['Supraventricular tachycardia', 'SVT', 'Narrow QRS, very fast and regular, no visible P waves.'],
+  flu:  ['Atrial flutter', 'FLUTTER', 'Sawtooth F waves at about 300 per minute.'],
+  ev:   ['Premature ventricular complexes', 'PVCs', 'Wide, early beat followed by a compensatory pause.'],
+  bav1: ['First-degree AV block', '1st-DEG AVB', 'Long (over 200 ms) but constant PR. Every P conducts.'],
+  wen:  ['2nd-degree AV block, Mobitz I', 'MOBITZ I', 'PR lengthens beat by beat until a P fails to conduct (Wenckebach).'],
+  mob2: ['2nd-degree AV block, Mobitz II', 'MOBITZ II', 'Constant PR, then suddenly a P with no QRS.'],
+  bav3: ['Third-degree AV block', '3rd-DEG AVB', 'P waves and QRS each keep their own pace: AV dissociation.'],
+  tdp:  ['Torsades de pointes', 'TORSADES', 'Polymorphic VT: the QRS twists around the baseline.']
+};
+const T = {
+  es: {
+    doc: 'Arritmia Arcade', title: 'ARRITMIA<span>ARCADE</span>', langChip: 'IDIOMA: ES', sound: 'SONIDO: ', yes: 'SÍ', no: 'NO',
+    score: 'PUNTOS', best: 'RÉCORD', level: 'NIVEL', streak: 'RACHA', lives: 'VIDAS', livesA: ' vidas',
+    intro: 'Lee el trazo del monitor y elige el ritmo antes de que se acabe el tiempo.',
+    li1: 'Tienes 3 vidas. Cada error o tiempo agotado cuesta una.',
+    li2: 'Las rachas multiplican los puntos, hasta x5.',
+    li3: 'Cada 5 aciertos subes de nivel y aparecen ritmos nuevos. Son 15 en total.',
+    li4: 'Teclado: <kbd>1</kbd>–<kbd>4</kbd> para responder, <kbd>Enter</kbd> para continuar.',
+    play: 'JUGAR',
+    note: 'Trazos sintéticos con fines educativos. No sustituyen un ECG real de 12 derivaciones ni sirven para diagnóstico. <a href="privacidad.html">Privacidad</a>',
+    newRec: '¡NUEVO RÉCORD!', rankLab: 'Rango alcanzado:', hits: 'ACIERTOS', bestStreak: 'MEJOR RACHA', review: 'PARA REPASAR', again: 'JUGAR OTRA VEZ',
+    right: '¡CORRECTO!', wrong: 'INCORRECTO', time: '¡TIEMPO!', was: 'Era', next: 'SIGUIENTE', result: 'VER RESULTADO',
+    lvl: 'NIVEL', newR: 'Ritmos nuevos: ', less: 'Menos tiempo por caso', case: 'CASO ', end: 'FIN',
+    aria: 'Trazo de electrocardiograma en movimiento',
+    ranks: ['Estudiante de primer año', 'Interno de pregrado', 'Residente de guardia', 'Cardiólogo', 'Electrofisiólogo']
+  },
+  en: {
+    doc: 'Arrhythmia Arcade', title: 'ARRHYTHMIA<span>ARCADE</span>', langChip: 'LANGUAGE: EN', sound: 'SOUND: ', yes: 'ON', no: 'OFF',
+    score: 'SCORE', best: 'BEST', level: 'LEVEL', streak: 'STREAK', lives: 'LIVES', livesA: ' lives',
+    intro: 'Read the monitor strip and pick the rhythm before time runs out.',
+    li1: 'You have 3 lives. Each mistake or timeout costs one.',
+    li2: 'Streaks multiply your points, up to x5.',
+    li3: 'Every 5 correct answers you level up and new rhythms appear. There are 15 in total.',
+    li4: 'Keyboard: <kbd>1</kbd>–<kbd>4</kbd> to answer, <kbd>Enter</kbd> to continue.',
+    play: 'PLAY',
+    note: 'Synthetic strips for educational use. They do not replace a real 12-lead ECG and are not for diagnosis. <a href="privacy.html">Privacy</a>',
+    newRec: 'NEW HIGH SCORE!', rankLab: 'Rank reached:', hits: 'CORRECT', bestStreak: 'BEST STREAK', review: 'TO REVIEW', again: 'PLAY AGAIN',
+    right: 'CORRECT!', wrong: 'WRONG', time: 'TIME UP!', was: 'It was', next: 'NEXT', result: 'SEE RESULTS',
+    lvl: 'LEVEL', newR: 'New rhythms: ', less: 'Less time per case', case: 'CASE ', end: 'END',
+    aria: 'Moving electrocardiogram strip',
+    ranks: ['First-year med student', 'Intern', 'Resident on call', 'Cardiologist', 'Electrophysiologist']
+  }
+};
+let lang = 'es';
+try { lang = localStorage.getItem('arr-lang') || ((navigator.language || 'es').toLowerCase().startsWith('es') ? 'es' : 'en'); } catch (e) {}
+if (lang !== 'es' && lang !== 'en') lang = 'es';
+const tr = k => T[lang][k];
+const nm = id => lang === 'en' ? EN[id][0] : R[id].n;
+const sh = id => lang === 'en' ? EN[id][1] : R[id].s;
+const cl = id => lang === 'en' ? EN[id][2] : R[id].c;
 
 /* ---------- Síntesis del trazo ---------- */
 const FS = 250, DUR = 60;
@@ -362,12 +436,13 @@ const sfx = {
 function audioOn() {
   try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch (e) {}
 }
-function paintMute() { $('mute').textContent = 'SONIDO: ' + (muted ? 'NO' : 'SÍ'); $('mute').setAttribute('aria-pressed', String(muted)); }
+function paintMute() { $('mute').textContent = tr('sound') + (muted ? tr('no') : tr('yes')); $('mute').setAttribute('aria-pressed', String(muted)); }
 $('mute').addEventListener('click', () => { muted = !muted; try { localStorage.setItem('arr-mute', muted ? '1' : '0'); } catch (e) {} paintMute(); audioOn(); });
 paintMute();
 
 /* ---------- Juego ---------- */
 let st = 'start';            // start | play | fb | over
+let renderFb = null;
 let score = 0, best = 0, lives = 3, level = 1, streak = 0, bestStreak = 0, ok = 0, total = 0, caseNo = 0;
 let timeMax = 10, timeLeft = 10, missed = new Set(), fbTimer = null;
 try { best = parseInt(localStorage.getItem('arr-best') || '0', 10) || 0; } catch (e) {}
@@ -386,9 +461,14 @@ function hud() {
   const m = multOf(streak), el = $('mult'); el.textContent = 'x' + m;
   if (m !== lastMult) { el.classList.remove('pop'); void el.offsetWidth; if (m > lastMult) el.classList.add('pop'); lastMult = m; }
   $('lives').innerHTML = [0, 1, 2].map(i => heart(i < lives)).join('');
-  $('lives').setAttribute('aria-label', lives + ' vidas');
+  $('lives').setAttribute('aria-label', lives + tr('livesA'));
 }
-function show(p) { ['pStart', 'pPlay', 'pOver'].forEach(id => { $(id).hidden = id !== p; }); }
+function show(p) { ['pStart', 'pPlay', 'pOver'].forEach(id => { $(id).hidden = id !== p; }); $('cab').classList.toggle('playing', p === 'pPlay'); }
+function paintCaso() { $('caso').textContent = st === 'start' ? 'DEMO' : st === 'over' ? tr('end') : tr('case') + String(caseNo).padStart(2, '0'); }
+function paintOver() {
+  $('rank').textContent = rankOf(score);
+  $('revList').innerHTML = [...missed].map(i => `<li><b>${nm(i)}.</b> ${cl(i)}</li>`).join('');
+}
 function setBar() {
   const f = Math.max(0, timeLeft / timeMax), b = $('tbar');
   b.style.width = (f * 100) + '%'; b.classList.toggle('low', f < 0.3);
@@ -410,18 +490,17 @@ function nextRound() {
   const near = shuffle(R[id].x.filter(i => pool.includes(i)));
   const rest = shuffle(pool.filter(i => i !== id && !near.includes(i)));
   const opts = shuffle([id, ...near.concat(rest).slice(0, 3)]);
-  $('opts').innerHTML = opts.map((o, i) => `<button class="opt" type="button" data-id="${o}"><span class="k">${i + 1}</span><span>${R[o].n}</span></button>`).join('');
-  $('fb').innerHTML = ''; $('next').hidden = true; $('banner').hidden = true;
-  $('caso').textContent = 'CASO ' + String(caseNo).padStart(2, '0');
+  $('opts').innerHTML = opts.map((o, i) => `<button class="opt" type="button" data-id="${o}"><span class="k">${i + 1}</span><span>${nm(o)}</span></button>`).join('');
+  $('fb').innerHTML = ''; renderFb = null; $('next').hidden = true; $('banner').hidden = true;
   traceBad = false; screenEl.classList.remove('bad');
   timeMax = Math.max(4, 11 - level); timeLeft = timeMax; setBar();
-  st = 'play'; hud();
+  st = 'play'; paintCaso(); hud();
 }
 
 function answer(id) {
   if (st !== 'play') return;
   st = 'fb'; total++;
-  const right = id === cur, r = R[cur];
+  const right = id === cur, c0 = cur;
   document.querySelectorAll('.opt').forEach(b => {
     b.classList.add('done');
     if (b.dataset.id === cur) b.classList.add('ok');
@@ -431,13 +510,13 @@ function answer(id) {
     ok++; streak++; bestStreak = Math.max(bestStreak, streak);
     const pts = (100 + Math.round(100 * Math.max(0, timeLeft) / timeMax)) * multOf(streak);
     score += pts; sfx.ok();
-    $('fb').innerHTML = `<b class="g">¡CORRECTO! +${pts}</b>${r.c}`;
+    renderFb = () => { $('fb').innerHTML = `<b class="g">${tr('right')} +${pts}</b>${cl(c0)}`; }; renderFb();
     let wait = 1200;
     const nl = 1 + Math.floor(ok / 5);
     if (nl > level) {
       level = nl; wait = 2400; sfx.level();
-      const fresh = IDS.filter(i => R[i].l === level).map(i => R[i].s);
-      $('banner').innerHTML = `NIVEL ${level}<small>${fresh.length ? 'Ritmos nuevos: ' + fresh.join(' · ') : 'Menos tiempo por caso'}</small>`;
+      const fresh = IDS.filter(i => R[i].l === level).map(sh);
+      $('banner').innerHTML = `${tr('lvl')} ${level}<small>${fresh.length ? tr('newR') + fresh.join(' · ') : tr('less')}</small>`;
       $('banner').hidden = false;
     }
     fbTimer = setTimeout(nextRound, wait);
@@ -445,26 +524,27 @@ function answer(id) {
     lives--; streak = 0; missed.add(cur); sfx.bad();
     traceBad = true; screenEl.classList.add('bad');
     const cab = $('cab'); cab.classList.remove('shake'); void cab.offsetWidth; cab.classList.add('shake');
-    $('fb').innerHTML = `<b class="r">${id ? 'INCORRECTO' : '¡TIEMPO!'}</b>Era <b class="n">${r.n}</b>. ${r.c}`;
-    const nx = $('next'); nx.textContent = lives <= 0 ? 'VER RESULTADO' : 'SIGUIENTE'; nx.hidden = false;
+    const nx = $('next');
+    renderFb = () => {
+      $('fb').innerHTML = `<b class="r">${id ? tr('wrong') : tr('time')}</b>${tr('was')} <b class="n">${nm(c0)}</b>. ${cl(c0)}`;
+      nx.textContent = lives <= 0 ? tr('result') : tr('next');
+    };
+    renderFb(); nx.hidden = false;
     try { nx.focus({ preventScroll: true }); } catch (e) {}
   }
   hud();
 }
 
-function rankOf(s) {
-  return s < 500 ? 'Estudiante de primer año' : s < 1500 ? 'Interno de pregrado' : s < 3500 ? 'Residente de guardia' : s < 7000 ? 'Cardiólogo' : 'Electrofisiólogo';
-}
+function rankOf(s) { return tr('ranks')[s < 500 ? 0 : s < 1500 ? 1 : s < 3500 ? 2 : s < 7000 ? 3 : 4]; }
 function gameOver() {
   st = 'over'; load('asi'); traceBad = true; screenEl.classList.add('bad');
-  $('caso').textContent = 'FIN'; $('banner').hidden = true; timeLeft = 0; setBar();
+  $('banner').hidden = true; timeLeft = 0; setBar(); paintCaso();
   const isRec = score > best;
   if (isRec) { best = score; try { localStorage.setItem('arr-best', String(best)); } catch (e) {} }
   $('rec').hidden = !isRec;
-  $('rank').textContent = rankOf(score);
   $('rScore').textContent = pad(score); $('rOk').textContent = ok + '/' + total; $('rStreak').textContent = bestStreak; $('rLevel').textContent = level;
   $('rev').hidden = missed.size === 0;
-  $('revList').innerHTML = [...missed].map(i => `<li><b>${R[i].n}.</b> ${R[i].c}</li>`).join('');
+  paintOver();
   show('pOver'); hud(); sfx.over();
   try { $('again').focus({ preventScroll: true }); } catch (e) {}
 }
@@ -486,6 +566,18 @@ document.addEventListener('keydown', e => {
   }
 });
 
+function applyLang() {
+  document.documentElement.lang = lang; document.title = tr('doc');
+  document.querySelectorAll('[data-t]').forEach(el => { el.innerHTML = tr(el.dataset.t); });
+  $('lang').textContent = tr('langChip'); cv.setAttribute('aria-label', tr('aria'));
+  paintMute(); paintCaso();
+  document.querySelectorAll('.opt').forEach(b => { b.lastElementChild.textContent = nm(b.dataset.id); });
+  if (renderFb) renderFb();
+  if (st === 'over') paintOver();
+  hud();
+}
+$('lang').addEventListener('click', () => { lang = lang === 'es' ? 'en' : 'es'; try { localStorage.setItem('arr-lang', lang); } catch (e) {} applyLang(); });
+
 let prevNow = null;
 function frame(now) {
   const dt = prevNow === null ? 0 : Math.min(0.05, (now - prevNow) / 1000); prevNow = now;
@@ -498,7 +590,7 @@ function frame(now) {
 }
 
 function boot(d) {
-  hud();
+  applyLang();
   if (d && d.playing) {
     score = d.score | 0; lives = d.lives || 3; level = d.level || 1; streak = d.streak | 0; bestStreak = d.bestStreak | 0;
     ok = d.ok | 0; total = d.total | 0; caseNo = d.caseNo | 0; missed = new Set(d.missed || []); cur = null;

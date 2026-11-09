@@ -1,6 +1,6 @@
 // Sube este número en cada versión nueva para que los jugadores reciban la actualización.
-const CACHE = 'arritmia-v1';
-const CORE = ['./', 'index.html', 'privacidad.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
+const CACHE = 'arritmia-v2';
+const CORE = ['./', 'index.html', 'privacidad.html', 'privacy.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
