@@ -115,6 +115,40 @@ button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
 #rev b{color:var(--amber);font-weight:400}
 
 .chips{display:flex;gap:8px;flex-wrap:wrap}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.btn.alt{background:var(--panel);color:var(--cyan);border:3px solid var(--cyan);padding:11px 15px;box-shadow:4px 4px 0 var(--shadow)}
+.btn.alt:hover{background:var(--line)}
+.btn.alt:active{box-shadow:2px 2px 0 var(--shadow)}
+.picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.pick{min-width:0;min-height:40px;text-align:left;font-family:var(--f-body);font-size:19px;line-height:1.05;color:var(--muted);background:var(--panel);border:2px solid var(--line);border-radius:4px;padding:7px 8px;cursor:pointer}
+.pick:hover{border-color:var(--cyan)}
+.pick.on{color:var(--ink);background:var(--ok-bg);border-color:var(--phos)}
+#libGrid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+#libGrid .pick{color:var(--ink);text-align:center}
+#libGrid .pick.lock{color:var(--muted);opacity:.6}
+#libGrid .pick.cur{border-color:var(--amber);color:var(--amber);opacity:1}
+.pbar,.libtop,.libnav{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pbar{font-size:20px;color:var(--cyan)}
+.libnav h2{flex:1;min-width:0;text-align:center;color:var(--amber);font-size:clamp(11px,3vw,16px);line-height:1.5;text-wrap:balance}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px}
+.facts div{display:contents}
+.facts dt{color:var(--muted)}
+.facts dd{margin:0}
+.note.warn{color:var(--hot)}
+.unl{display:block;color:var(--cyan);font-size:18px}
+[data-view="practice"] .hud,[data-view="practice"] .timer,[data-view="lib"] .hud,[data-view="lib"] .timer,[data-view="setup"] .hud,[data-view="setup"] .timer{display:none}
+.float{position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:3;pointer-events:none;font-family:var(--f-display);font-size:clamp(12px,3.4vw,20px);color:var(--amber);text-shadow:2px 2px 0 #000;animation:rise .9s steps(9) forwards}
+@keyframes rise{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,-48px)}}
+.screen.flash{animation:flash .35s steps(3)}
+@keyframes flash{50%{box-shadow:inset 0 0 60px var(--phos),0 0 0 4px var(--shadow)}}
+.hrt{transform-box:fill-box;transform-origin:center}
+.hrt.brk{animation:brk .5s steps(5)}
+@keyframes brk{0%{fill:var(--hot);transform:scale(1)}40%{fill:#fff;transform:scale(1.6) rotate(-12deg)}100%{fill:var(--line);transform:scale(1)}}
+.opt{animation:optin .18s steps(3) backwards}
+.opt:nth-child(2){animation-delay:.04s}.opt:nth-child(3){animation-delay:.08s}.opt:nth-child(4){animation-delay:.12s}
+@keyframes optin{from{opacity:0;transform:translateY(8px)}}
+.banner{animation:ban .3s steps(4)}
+@keyframes ban{from{transform:translate(-50%,-50%) scale(.4)}}
 @media (max-width:540px){
   body{padding-top:max(10px,env(safe-area-inset-top,0px));padding-bottom:max(10px,env(safe-area-inset-bottom,0px))}
   .cab{gap:8px}
@@ -131,7 +165,7 @@ button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
   .res{grid-template-columns:repeat(2,auto)}
 }
 @media (prefers-reduced-motion:reduce){
-  .cab.shake,#mult.pop,.rec{animation:none}
+  .cab.shake,#mult.pop,.rec,.float,.screen.flash,.hrt.brk,.opt,.banner{animation:none}
 }
 .note a{color:var(--cyan)}
 </style>
@@ -172,15 +206,53 @@ button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
         <li data-t="li3"></li>
         <li data-t="li4"></li>
       </ul>
-      <button class="btn" id="start" type="button" data-t="play">JUGAR</button>
+      <div class="row">
+        <button class="btn" id="start" type="button" data-t="play">JUGAR</button>
+        <button class="btn alt" id="goPrac" type="button" data-t="practice">PRÁCTICA</button>
+        <button class="btn alt" id="goLib" type="button" data-t="library">BIBLIOTECA</button>
+      </div>
       <p class="note" data-t="note"></p>
     </div>
   </section>
 
   <section class="panel" id="pPlay" hidden>
+    <div class="pbar" id="pbar" hidden><span id="pstat"></span><button class="chip" id="quit" type="button" data-t="quit">SALIR</button></div>
     <div class="opts" id="opts"></div>
     <div class="fb" id="fb" aria-live="polite"></div>
     <button class="btn" id="next" type="button" hidden>SIGUIENTE</button>
+  </section>
+
+  <section class="panel" id="pSetup" hidden>
+    <div class="card">
+      <h2 data-t="pracTitle">MODO PRÁCTICA</h2>
+      <p data-t="pracIntro"></p>
+      <div class="row">
+        <button class="chip" id="selAll" type="button" data-t="selAll">Todos</button>
+        <button class="chip" id="selNone" type="button" data-t="selNone">Ninguno</button>
+        <button class="chip" id="selWeak" type="button" data-t="selWeak">Mis fallos</button>
+      </div>
+      <div class="picks" id="picks"></div>
+      <p class="note" id="pickMsg" data-t="pickMin"></p>
+      <div class="row">
+        <button class="btn" id="pracGo" type="button" data-t="begin">EMPEZAR</button>
+        <button class="btn alt" id="pracBack" type="button" data-t="back">VOLVER</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="pLib" hidden>
+    <div class="card">
+      <div class="libtop"><h3 id="libCount"></h3><button class="chip" id="libBack" type="button" data-t="back">VOLVER</button></div>
+      <div class="libnav">
+        <button class="chip" id="libPrev" type="button" aria-label="Anterior">&lt;</button>
+        <h2 id="libName"></h2>
+        <button class="chip" id="libNext" type="button" aria-label="Siguiente">&gt;</button>
+      </div>
+      <p id="libClue"></p>
+      <dl class="facts" id="libFacts"></dl>
+      <p class="note" id="libConf"></p>
+    </div>
+    <div class="picks" id="libGrid"></div>
   </section>
 
   <section class="panel" id="pOver" hidden>
@@ -198,7 +270,10 @@ button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
         <h3 data-t="review">PARA REPASAR</h3>
         <ul id="revList"></ul>
       </div>
-      <button class="btn" id="again" type="button" data-t="again">JUGAR OTRA VEZ</button>
+      <div class="row">
+        <button class="btn" id="again" type="button" data-t="again">JUGAR OTRA VEZ</button>
+        <button class="btn alt" id="home" type="button" data-t="home">INICIO</button>
+      </div>
     </div>
   </section>
 </main>
@@ -264,6 +339,11 @@ const T = {
     right: '¡CORRECTO!', wrong: 'INCORRECTO', time: '¡TIEMPO!', was: 'Era', next: 'SIGUIENTE', result: 'VER RESULTADO',
     lvl: 'NIVEL', newR: 'Ritmos nuevos: ', less: 'Menos tiempo por caso', case: 'CASO ', end: 'FIN',
     aria: 'Trazo de electrocardiograma en movimiento',
+    practice: 'PRÁCTICA', library: 'BIBLIOTECA', quit: 'SALIR', back: 'VOLVER', home: 'INICIO',
+    pracTitle: 'MODO PRÁCTICA', pracIntro: 'Sin reloj ni vidas. Elige qué ritmos entrenar.',
+    selAll: 'Todos', selNone: 'Ninguno', selWeak: 'Mis fallos', pickMin: 'Elige al menos 2 ritmos.', begin: 'EMPEZAR', pracTag: 'PRÁCTICA',
+    locked: 'Identifica este ritmo en una partida o en práctica para desbloquearlo. Aparece desde el nivel {n}.',
+    factL: ['Frecuencia', 'Ritmo', 'Onda P', 'PR / QRS'], conf: 'Se confunde con: ', unlocked: 'Nuevo en la biblioteca:',
     ranks: ['Estudiante de primer año', 'Interno de pregrado', 'Residente de guardia', 'Cardiólogo', 'Electrofisiólogo']
   },
   en: {
@@ -280,6 +360,11 @@ const T = {
     right: 'CORRECT!', wrong: 'WRONG', time: 'TIME UP!', was: 'It was', next: 'NEXT', result: 'SEE RESULTS',
     lvl: 'LEVEL', newR: 'New rhythms: ', less: 'Less time per case', case: 'CASE ', end: 'END',
     aria: 'Moving electrocardiogram strip',
+    practice: 'PRACTICE', library: 'LIBRARY', quit: 'QUIT', back: 'BACK', home: 'HOME',
+    pracTitle: 'PRACTICE MODE', pracIntro: 'No clock, no lives. Choose which rhythms to train.',
+    selAll: 'All', selNone: 'None', selWeak: 'My misses', pickMin: 'Pick at least 2 rhythms.', begin: 'START', pracTag: 'PRACTICE',
+    locked: 'Identify this rhythm in a game or in practice to unlock it. It appears from level {n}.',
+    factL: ['Rate', 'Rhythm', 'P wave', 'PR / QRS'], conf: 'Often confused with: ', unlocked: 'New in the library:',
     ranks: ['First-year med student', 'Intern', 'Resident on call', 'Cardiologist', 'Electrophysiologist']
   }
 };
@@ -290,6 +375,33 @@ const tr = k => T[lang][k];
 const nm = id => lang === 'en' ? EN[id][0] : R[id].n;
 const sh = id => lang === 'en' ? EN[id][1] : R[id].s;
 const cl = id => lang === 'en' ? EN[id][2] : R[id].c;
+
+/* Ficha de la biblioteca: frecuencia, ritmo, onda P, PR/QRS */
+const D = {
+  sin:  { es: ['60–100 lpm', 'Regular', 'Presente, una por cada QRS', 'PR 120–200 ms; QRS estrecho'], en: ['60–100 bpm', 'Regular', 'Present, one per QRS', 'PR 120–200 ms; narrow QRS'] },
+  brad: { es: ['Menos de 60 lpm', 'Regular', 'Presente, una por cada QRS', 'PR normal; QRS estrecho'], en: ['Below 60 bpm', 'Regular', 'Present, one per QRS', 'Normal PR; narrow QRS'] },
+  taq:  { es: ['Más de 100 lpm, por lo general menos de 150', 'Regular', 'Presente; puede acercarse a la T previa', 'PR normal; QRS estrecho'], en: ['Above 100 bpm, usually below 150', 'Regular', 'Present; may approach the previous T', 'Normal PR; narrow QRS'] },
+  asi:  { es: ['Sin frecuencia', 'Sin actividad', 'Ausente', 'Ausente'], en: ['None', 'No activity', 'Absent', 'Absent'] },
+  fv:   { es: ['No medible', 'Caótico', 'Ausente', 'Sin complejos definidos'], en: ['Not measurable', 'Chaotic', 'Absent', 'No defined complexes'] },
+  fa:   { es: ['Ventricular variable; auricular 350–600/min', 'Irregularmente irregular', 'Ausente; ondas f finas', 'Sin PR medible; QRS estrecho'], en: ['Variable ventricular; atrial 350–600/min', 'Irregularly irregular', 'Absent; fine f waves', 'No measurable PR; narrow QRS'] },
+  tv:   { es: ['100–250 lpm', 'Regular', 'No visible o disociada', 'QRS ancho (120 ms o más)'], en: ['100–250 bpm', 'Regular', 'Not visible or dissociated', 'Wide QRS (120 ms or more)'] },
+  tsv:  { es: ['150–250 lpm', 'Muy regular', 'Oculta o retrógrada', 'QRS estrecho'], en: ['150–250 bpm', 'Very regular', 'Hidden or retrograde', 'Narrow QRS'] },
+  flu:  { es: ['Auricular cerca de 300/min; ventricular según la conducción (2:1, 3:1, 4:1)', 'Regular si la conducción es fija', 'Ondas F en dientes de sierra', 'QRS estrecho'], en: ['Atrial about 300/min; ventricular depends on conduction (2:1, 3:1, 4:1)', 'Regular if conduction is fixed', 'Sawtooth F waves', 'Narrow QRS'] },
+  ev:   { es: ['La del ritmo de base', 'Irregular por latidos prematuros', 'Ausente antes del latido prematuro', 'QRS ancho y distinto en la extrasístole'], en: ['That of the underlying rhythm', 'Irregular due to early beats', 'Absent before the early beat', 'Wide, different QRS in the PVC'] },
+  bav1: { es: ['La del ritmo sinusal', 'Regular', 'Presente, una por cada QRS', 'PR mayor de 200 ms y constante; QRS estrecho'], en: ['That of the sinus rhythm', 'Regular', 'Present, one per QRS', 'PR over 200 ms and constant; narrow QRS'] },
+  wen:  { es: ['Ventricular menor que la auricular', 'Irregular, en grupos de latidos', 'Más ondas P que QRS', 'El PR se alarga hasta una P bloqueada'], en: ['Ventricular lower than atrial', 'Irregular, grouped beats', 'More P waves than QRS', 'PR lengthens until a blocked P'] },
+  mob2: { es: ['Ventricular menor que la auricular', 'Regular con pausas súbitas', 'Más ondas P que QRS', 'PR constante; P bloqueada sin aviso'], en: ['Ventricular lower than atrial', 'Regular with sudden pauses', 'More P waves than QRS', 'Constant PR; P blocked without warning'] },
+  bav3: { es: ['Ventricular 20–60 lpm (ritmo de escape)', 'P regulares y QRS regulares, sin relación entre sí', 'Más ondas P que QRS, disociadas', 'PR variable; QRS estrecho o ancho según el escape'], en: ['Ventricular 20–60 bpm (escape rhythm)', 'Regular P and regular QRS, unrelated to each other', 'More P waves than QRS, dissociated', 'Variable PR; narrow or wide QRS depending on the escape'] },
+  tdp:  { es: ['200–250 lpm', 'Irregular', 'No visible', 'QRS ancho, de amplitud y eje cambiantes; QT largo de base'], en: ['200–250 bpm', 'Irregular', 'Not visible', 'Wide QRS with changing amplitude and axis; long baseline QT'] }
+};
+
+/* Progreso guardado en el dispositivo: ritmos ya identificados y ritmos que cuestan más */
+let seen = new Set(), weak = {};
+try {
+  seen = new Set(JSON.parse(localStorage.getItem('arr-seen') || '[]').filter(i => R[i]));
+  weak = JSON.parse(localStorage.getItem('arr-weak') || '{}') || {};
+} catch (e) {}
+const save = () => { try { localStorage.setItem('arr-seen', JSON.stringify([...seen])); localStorage.setItem('arr-weak', JSON.stringify(weak)); } catch (e) {} };
 
 /* ---------- Síntesis del trazo ---------- */
 const FS = 250, DUR = 60;
@@ -443,16 +555,17 @@ paintMute();
 /* ---------- Juego ---------- */
 let st = 'start';            // start | play | fb | over
 let renderFb = null;
+let mode = 'game', pOk = 0, pTot = 0, picked = new Set(IDS), libI = 0, lastLives = 3;
 let score = 0, best = 0, lives = 3, level = 1, streak = 0, bestStreak = 0, ok = 0, total = 0, caseNo = 0;
 let timeMax = 10, timeLeft = 10, missed = new Set(), fbTimer = null;
 try { best = parseInt(localStorage.getItem('arr-best') || '0', 10) || 0; } catch (e) {}
 
 const pad = v => String(v).padStart(6, '0');
 const HP = ['0110110', '1111111', '1111111', '0111110', '0011100', '0001000'];
-function heart(on) {
+function heart(on, brk) {
   let r = '';
   HP.forEach((row, yy) => [...row].forEach((c, xx) => { if (c === '1') r += `<rect x="${xx}" y="${yy}" width="1" height="1"/>`; }));
-  return `<svg class="hrt${on ? '' : ' off'}" viewBox="0 0 7 6" width="21" height="18" aria-hidden="true">${r}</svg>`;
+  return `<svg class="hrt${on ? '' : ' off'}${brk ? ' brk' : ''}" viewBox="0 0 7 6" width="21" height="18" aria-hidden="true">${r}</svg>`;
 }
 const multOf = s => Math.min(5, 1 + Math.floor(s / 3));
 let lastMult = 1;
@@ -460,11 +573,23 @@ function hud() {
   $('score').textContent = pad(score); $('best').textContent = pad(Math.max(best, score)); $('level').textContent = level;
   const m = multOf(streak), el = $('mult'); el.textContent = 'x' + m;
   if (m !== lastMult) { el.classList.remove('pop'); void el.offsetWidth; if (m > lastMult) el.classList.add('pop'); lastMult = m; }
-  $('lives').innerHTML = [0, 1, 2].map(i => heart(i < lives)).join('');
+  const brk = lives < lastLives; lastLives = lives;
+  $('lives').innerHTML = [0, 1, 2].map(i => heart(i < lives, brk && i === lives)).join('');
   $('lives').setAttribute('aria-label', lives + tr('livesA'));
 }
-function show(p) { ['pStart', 'pPlay', 'pOver'].forEach(id => { $(id).hidden = id !== p; }); $('cab').classList.toggle('playing', p === 'pPlay'); }
-function paintCaso() { $('caso').textContent = st === 'start' ? 'DEMO' : st === 'over' ? tr('end') : tr('case') + String(caseNo).padStart(2, '0'); }
+const PAN = { start: 'pStart', game: 'pPlay', practice: 'pPlay', lib: 'pLib', setup: 'pSetup', over: 'pOver' };
+function show(v) {
+  const cab = $('cab'); cab.dataset.view = v;
+  ['pStart', 'pPlay', 'pLib', 'pSetup', 'pOver'].forEach(id => { $(id).hidden = id !== PAN[v]; });
+  cab.classList.toggle('playing', v === 'game' || v === 'practice' || v === 'lib');
+  $('pbar').hidden = v !== 'practice';
+}
+function paintPstat() { $('pstat').textContent = tr('pracTag') + ' · ' + pOk + '/' + pTot; }
+const focusNext = () => { try { $('next').focus({ preventScroll: true }); } catch (e) {} };
+function paintCaso() {
+  $('caso').textContent = st === 'start' || st === 'setup' ? 'DEMO' : st === 'over' ? tr('end') : st === 'lib' ? tr('library')
+    : mode === 'practice' ? tr('pracTag') : tr('case') + String(caseNo).padStart(2, '0');
+}
 function paintOver() {
   $('rank').textContent = rankOf(score);
   $('revList').innerHTML = [...missed].map(i => `<li><b>${nm(i)}.</b> ${cl(i)}</li>`).join('');
@@ -475,64 +600,88 @@ function setBar() {
 }
 
 function startGame() {
-  audioOn();
+  audioOn(); mode = 'game';
   score = 0; lives = 3; level = 1; streak = 0; bestStreak = 0; ok = 0; total = 0; caseNo = 0; missed = new Set(); cur = null;
-  show('pPlay'); nextRound();
+  show('game'); nextRound();
 }
 
 function nextRound() {
   clearTimeout(fbTimer);
   caseNo++;
-  const pool = IDS.filter(i => R[i].l <= level), bag = [];
-  pool.forEach(i => { if (i === cur) return; bag.push(i); if (level > 1 && R[i].l === Math.min(level, 4)) bag.push(i); });
+  const prac = mode === 'practice';
+  const pool = prac ? [...picked] : IDS.filter(i => R[i].l <= level), bag = [];
+  pool.forEach(i => {
+    if (i === cur && pool.length > 1) return;
+    let w = 1 + Math.min(3, weak[i] || 0);          // los ritmos fallados salen más seguido
+    if (!prac && level > 1 && R[i].l === Math.min(level, 4)) w++;
+    while (w--) bag.push(i);
+  });
   const id = pick(bag);
   load(id);
-  const near = shuffle(R[id].x.filter(i => pool.includes(i)));
-  const rest = shuffle(pool.filter(i => i !== id && !near.includes(i)));
+  const dpool = prac ? IDS : pool;
+  const near = shuffle(R[id].x.filter(i => dpool.includes(i)));
+  const rest = shuffle(dpool.filter(i => i !== id && !near.includes(i)));
   const opts = shuffle([id, ...near.concat(rest).slice(0, 3)]);
   $('opts').innerHTML = opts.map((o, i) => `<button class="opt" type="button" data-id="${o}"><span class="k">${i + 1}</span><span>${nm(o)}</span></button>`).join('');
   $('fb').innerHTML = ''; renderFb = null; $('next').hidden = true; $('banner').hidden = true;
   traceBad = false; screenEl.classList.remove('bad');
   timeMax = Math.max(4, 11 - level); timeLeft = timeMax; setBar();
-  st = 'play'; paintCaso(); hud();
+  st = 'play'; paintCaso(); paintPstat(); hud();
 }
 
 function answer(id) {
   if (st !== 'play') return;
-  st = 'fb'; total++;
-  const right = id === cur, c0 = cur;
+  st = 'fb';
+  const right = id === cur, c0 = cur, prac = mode === 'practice', nx = $('next');
   document.querySelectorAll('.opt').forEach(b => {
     b.classList.add('done');
     if (b.dataset.id === cur) b.classList.add('ok');
     else if (b.dataset.id === id) b.classList.add('bad');
   });
+  let fresh = false;
+  if (right) { if (!seen.has(c0)) { seen.add(c0); fresh = true; } weak[c0] = Math.max(0, (weak[c0] || 0) - 1); }
+  else weak[c0] = Math.min(4, (weak[c0] || 0) + 2);
+  save();
+  const unl = () => fresh ? `<span class="unl">${tr('unlocked')} ${sh(c0)}</span>` : '';
   if (right) {
-    ok++; streak++; bestStreak = Math.max(bestStreak, streak);
-    const pts = (100 + Math.round(100 * Math.max(0, timeLeft) / timeMax)) * multOf(streak);
-    score += pts; sfx.ok();
-    renderFb = () => { $('fb').innerHTML = `<b class="g">${tr('right')} +${pts}</b>${cl(c0)}`; }; renderFb();
-    let wait = 1200;
-    const nl = 1 + Math.floor(ok / 5);
-    if (nl > level) {
-      level = nl; wait = 2400; sfx.level();
-      const fresh = IDS.filter(i => R[i].l === level).map(sh);
-      $('banner').innerHTML = `${tr('lvl')} ${level}<small>${fresh.length ? tr('newR') + fresh.join(' · ') : tr('less')}</small>`;
-      $('banner').hidden = false;
+    sfx.ok();
+    screenEl.classList.remove('flash'); void screenEl.offsetWidth; screenEl.classList.add('flash');
+    if (prac) {
+      pOk++; pTot++;
+      renderFb = () => { $('fb').innerHTML = `<b class="g">${tr('right')}</b>${cl(c0)}${unl()}`; nx.textContent = tr('next'); };
+      renderFb(); nx.hidden = false; focusNext();
+    } else {
+      total++; ok++; streak++; bestStreak = Math.max(bestStreak, streak);
+      const pts = (100 + Math.round(100 * Math.max(0, timeLeft) / timeMax)) * multOf(streak);
+      score += pts;
+      const f = document.createElement('div'); f.className = 'float'; f.textContent = '+' + pts;
+      screenEl.appendChild(f); setTimeout(() => f.remove(), 950);
+      renderFb = () => { $('fb').innerHTML = `<b class="g">${tr('right')} +${pts}</b>${cl(c0)}${unl()}`; };
+      renderFb();
+      let wait = 1200;
+      const nl = 1 + Math.floor(ok / 5);
+      if (nl > level) {
+        level = nl; wait = 2400; sfx.level();
+        const news = IDS.filter(i => R[i].l === level).map(sh);
+        $('banner').innerHTML = `${tr('lvl')} ${level}<small>${news.length ? tr('newR') + news.join(' · ') : tr('less')}</small>`;
+        $('banner').hidden = false;
+      }
+      fbTimer = setTimeout(nextRound, wait);
     }
-    fbTimer = setTimeout(nextRound, wait);
   } else {
-    lives--; streak = 0; missed.add(cur); sfx.bad();
-    traceBad = true; screenEl.classList.add('bad');
-    const cab = $('cab'); cab.classList.remove('shake'); void cab.offsetWidth; cab.classList.add('shake');
-    const nx = $('next');
+    sfx.bad(); traceBad = true; screenEl.classList.add('bad');
+    if (prac) pTot++;
+    else {
+      total++; lives--; streak = 0; missed.add(c0);
+      const cab = $('cab'); cab.classList.remove('shake'); void cab.offsetWidth; cab.classList.add('shake');
+    }
     renderFb = () => {
       $('fb').innerHTML = `<b class="r">${id ? tr('wrong') : tr('time')}</b>${tr('was')} <b class="n">${nm(c0)}</b>. ${cl(c0)}`;
-      nx.textContent = lives <= 0 ? tr('result') : tr('next');
+      nx.textContent = !prac && lives <= 0 ? tr('result') : tr('next');
     };
-    renderFb(); nx.hidden = false;
-    try { nx.focus({ preventScroll: true }); } catch (e) {}
+    renderFb(); nx.hidden = false; focusNext();
   }
-  hud();
+  hud(); paintPstat();
 }
 
 function rankOf(s) { return tr('ranks')[s < 500 ? 0 : s < 1500 ? 1 : s < 3500 ? 2 : s < 7000 ? 3 : 4]; }
@@ -545,14 +694,72 @@ function gameOver() {
   $('rScore').textContent = pad(score); $('rOk').textContent = ok + '/' + total; $('rStreak').textContent = bestStreak; $('rLevel').textContent = level;
   $('rev').hidden = missed.size === 0;
   paintOver();
-  show('pOver'); hud(); sfx.over();
+  show('over'); hud(); sfx.over();
   try { $('again').focus({ preventScroll: true }); } catch (e) {}
 }
 
 function primary() {
   if (st === 'start' || st === 'over') startGame();
-  else if (st === 'fb' && !$('next').hidden) { lives <= 0 ? gameOver() : nextRound(); }
+  else if (st === 'setup') startPractice();
+  else if (st === 'fb' && !$('next').hidden) { mode === 'game' && lives <= 0 ? gameOver() : nextRound(); }
 }
+
+function goHome() {
+  clearTimeout(fbTimer); st = 'start'; mode = 'game';
+  score = 0; lives = 3; lastLives = 3; level = 1; streak = 0;
+  load('sin'); traceBad = false; screenEl.classList.remove('bad'); $('banner').hidden = true;
+  timeLeft = timeMax; setBar(); show('start'); paintCaso(); hud();
+}
+
+/* ----- Práctica ----- */
+function paintPicks() {
+  $('picks').innerHTML = IDS.map(i => `<button class="pick${picked.has(i) ? ' on' : ''}" type="button" aria-pressed="${picked.has(i)}" data-id="${i}">${nm(i)}</button>`).join('');
+  $('pickMsg').classList.remove('warn');
+}
+function openSetup() { audioOn(); st = 'setup'; show('setup'); paintPicks(); paintCaso(); }
+function startPractice() {
+  if (picked.size < 2) { $('pickMsg').classList.add('warn'); return; }
+  audioOn(); mode = 'practice'; pOk = 0; pTot = 0; cur = null;
+  show('practice'); nextRound();
+}
+$('picks').addEventListener('click', e => {
+  const b = e.target.closest('.pick'); if (!b) return;
+  picked.has(b.dataset.id) ? picked.delete(b.dataset.id) : picked.add(b.dataset.id);
+  paintPicks();
+});
+$('selAll').addEventListener('click', () => { picked = new Set(IDS); paintPicks(); });
+$('selNone').addEventListener('click', () => { picked = new Set(); paintPicks(); });
+$('selWeak').addEventListener('click', () => { const w = IDS.filter(i => weak[i] > 0); if (w.length) { picked = new Set(w); paintPicks(); } });
+$('goPrac').addEventListener('click', openSetup);
+$('pracGo').addEventListener('click', startPractice);
+$('pracBack').addEventListener('click', goHome);
+$('quit').addEventListener('click', goHome);
+$('home').addEventListener('click', goHome);
+
+/* ----- Biblioteca ----- */
+function paintLib(reload) {
+  const id = IDS[libI], open = seen.has(id);
+  if (reload) { load(id); traceBad = false; screenEl.classList.remove('bad'); }
+  $('libCount').textContent = tr('library') + ' ' + seen.size + '/' + IDS.length;
+  $('libName').textContent = open ? nm(id) : '???';
+  $('libClue').textContent = open ? cl(id) : tr('locked').replace('{n}', R[id].l);
+  $('libFacts').innerHTML = open ? tr('factL').map((l, k) => `<div><dt>${l}</dt><dd>${D[id][lang][k]}</dd></div>`).join('') : '';
+  $('libConf').textContent = open ? tr('conf') + R[id].x.map(nm).join(', ') + '.' : '';
+  $('libGrid').innerHTML = IDS.map((i, k) => `<button class="pick${k === libI ? ' cur' : ''}${seen.has(i) ? '' : ' lock'}" type="button" data-i="${k}">${seen.has(i) ? sh(i) : '???'}</button>`).join('');
+  paintCaso();
+}
+function openLib() {
+  audioOn(); clearTimeout(fbTimer); st = 'lib'; mode = 'game'; $('banner').hidden = true;
+  const first = IDS.findIndex(i => seen.has(i)); libI = first < 0 ? 0 : first;
+  show('lib'); paintLib(true);
+}
+function libStep(d) { libI = (libI + d + IDS.length) % IDS.length; paintLib(true); }
+$('goLib').addEventListener('click', openLib);
+$('libBack').addEventListener('click', goHome);
+$('libPrev').addEventListener('click', () => libStep(-1));
+$('libNext').addEventListener('click', () => libStep(1));
+$('libGrid').addEventListener('click', e => { const b = e.target.closest('.pick'); if (b) { libI = +b.dataset.i; paintLib(true); } });
+
 $('start').addEventListener('click', startGame);
 $('again').addEventListener('click', startGame);
 $('next').addEventListener('click', primary);
@@ -563,6 +770,10 @@ document.addEventListener('keydown', e => {
     const b = document.querySelectorAll('.opt')[+e.key - 1]; if (b) { e.preventDefault(); answer(b.dataset.id); }
   } else if ((e.key === 'Enter' || e.key === ' ') && document.activeElement.tagName !== 'BUTTON') {
     e.preventDefault(); primary();
+  } else if (st === 'lib' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+    e.preventDefault(); libStep(e.key === 'ArrowLeft' ? -1 : 1);
+  } else if (e.key === 'Escape' && (st === 'lib' || st === 'setup' || mode === 'practice')) {
+    goHome();
   }
 });
 
@@ -574,6 +785,9 @@ function applyLang() {
   document.querySelectorAll('.opt').forEach(b => { b.lastElementChild.textContent = nm(b.dataset.id); });
   if (renderFb) renderFb();
   if (st === 'over') paintOver();
+  if (st === 'lib') paintLib(false);
+  if (st === 'setup') paintPicks();
+  paintPstat();
   hud();
 }
 $('lang').addEventListener('click', () => { lang = lang === 'es' ? 'en' : 'es'; try { localStorage.setItem('arr-lang', lang); } catch (e) {} applyLang(); });
@@ -583,23 +797,23 @@ function frame(now) {
   const dt = prevNow === null ? 0 : Math.min(0.05, (now - prevNow) / 1000); prevNow = now;
   t += dt;
   if (t > DUR - 0.5) load(cur);
-  while (bi < buf.beats.length && buf.beats[bi] <= t) { if (st === 'play' || st === 'fb') sfx.blip(); bi++; }
-  if (st === 'play') { timeLeft -= dt; setBar(); if (timeLeft <= 0) answer(null); }
+  while (bi < buf.beats.length && buf.beats[bi] <= t) { if (st === 'play' || st === 'fb' || st === 'lib') sfx.blip(); bi++; }
+  if (st === 'play' && mode === 'game') { timeLeft -= dt; setBar(); if (timeLeft <= 0) answer(null); }
   draw();
   requestAnimationFrame(frame);
 }
 
 function boot(d) {
-  applyLang();
+  show('start'); applyLang();
   if (d && d.playing) {
     score = d.score | 0; lives = d.lives || 3; level = d.level || 1; streak = d.streak | 0; bestStreak = d.bestStreak | 0;
     ok = d.ok | 0; total = d.total | 0; caseNo = d.caseNo | 0; missed = new Set(d.missed || []); cur = null;
-    show('pPlay'); nextRound();
+    show('game'); nextRound();
   }
   requestAnimationFrame(frame);
 }
 const hot = window.claude && window.claude.hot;
-try { if (hot && hot.snapshot) hot.snapshot(() => ({ playing: st === 'play' || st === 'fb', score, lives: Math.max(1, lives), level, streak, bestStreak, ok, total, caseNo: Math.max(0, caseNo - 1), missed: [...missed] })); } catch (e) {}
+try { if (hot && hot.snapshot) hot.snapshot(() => ({ playing: mode === 'game' && (st === 'play' || st === 'fb'), score, lives: Math.max(1, lives), level, streak, bestStreak, ok, total, caseNo: Math.max(0, caseNo - 1), missed: [...missed] })); } catch (e) {}
 if (hot && hot.ready) hot.ready(boot); else boot((hot && hot.data) || {});
 })();
 </script>
