@@ -135,8 +135,21 @@ button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
 .facts dt{color:var(--muted)}
 .facts dd{margin:0}
 .note.warn{color:var(--hot)}
+.plist{display:flex;flex-direction:column;gap:6px}
+.prow{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(36px,1fr) auto;gap:10px;align-items:center;font-size:19px;line-height:1.05}
+.pmeter{height:10px;background:var(--shadow);border:1px solid var(--line)}
+.pmeter i{display:block;height:100%;background:var(--phos)}
+.pmeter i.mid{background:var(--amber)}
+.pmeter i.low{background:var(--hot)}
+.prow>span:first-child{overflow-wrap:anywhere}
+.pnum{min-width:5.2em;text-align:right;white-space:nowrap;color:var(--muted);font-variant-numeric:tabular-nums}
+.sum{display:grid;grid-template-columns:repeat(4,auto);justify-content:space-between;gap:10px 16px;margin:0}
+.sum div{display:flex;flex-direction:column;gap:4px}
+.sum dt{font-size:16px;letter-spacing:.08em;color:var(--muted)}
+.sum dd{margin:0;font-family:var(--f-display);font-size:12px;color:var(--amber)}
+#copyBox{width:100%;min-height:6em;font-family:var(--f-body);font-size:17px;color:var(--ink);background:var(--shadow);border:2px solid var(--line);border-radius:4px;padding:8px}
 .unl{display:block;color:var(--cyan);font-size:18px}
-[data-view="practice"] .hud,[data-view="practice"] .timer,[data-view="lib"] .hud,[data-view="lib"] .timer,[data-view="setup"] .hud,[data-view="setup"] .timer{display:none}
+[data-view="practice"] .hud,[data-view="practice"] .timer,[data-view="lib"] .hud,[data-view="lib"] .timer,[data-view="setup"] .hud,[data-view="setup"] .timer,[data-view="prog"] .hud,[data-view="prog"] .timer{display:none}
 .float{position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:3;pointer-events:none;font-family:var(--f-display);font-size:clamp(12px,3.4vw,20px);color:var(--amber);text-shadow:2px 2px 0 #000;animation:rise .9s steps(9) forwards}
 @keyframes rise{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,-48px)}}
 .screen.flash{animation:flash .35s steps(3)}
@@ -162,7 +175,7 @@ button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
   .opt .k{display:none}
   .fb{font-size:20px;min-height:3.2em}
   .btn{padding:12px 16px}
-  .res{grid-template-columns:repeat(2,auto)}
+  .res,.sum{grid-template-columns:repeat(2,auto)}
 }
 @media (prefers-reduced-motion:reduce){
   .cab.shake,#mult.pop,.rec,.float,.screen.flash,.hrt.brk,.opt,.banner{animation:none}
@@ -210,8 +223,10 @@ button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
         <button class="btn" id="start" type="button" data-t="play">JUGAR</button>
         <button class="btn alt" id="goPrac" type="button" data-t="practice">PRÁCTICA</button>
         <button class="btn alt" id="goLib" type="button" data-t="library">BIBLIOTECA</button>
+        <button class="btn alt" id="goProg" type="button" data-t="progress">PROGRESO</button>
       </div>
       <p class="note" data-t="note"></p>
+      <p class="note"><span class="ver"></span> <a class="fbl" target="_blank" rel="noopener" hidden></a></p>
     </div>
   </section>
 
@@ -220,6 +235,20 @@ button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
     <div class="opts" id="opts"></div>
     <div class="fb" id="fb" aria-live="polite"></div>
     <button class="btn" id="next" type="button" hidden>SIGUIENTE</button>
+  </section>
+
+  <section class="panel" id="pProg" hidden>
+    <div class="card">
+      <div class="libtop"><h2 data-t="progress">PROGRESO</h2><button class="chip" id="progBack" type="button" data-t="back">VOLVER</button></div>
+      <dl class="sum" id="progSum"></dl>
+      <div class="plist" id="progList"></div>
+      <div class="row">
+        <button class="btn alt" id="copyRes" type="button" data-t="copy">COPIAR RESULTADOS</button>
+        <span class="note" id="copyMsg" aria-live="polite"></span>
+      </div>
+      <textarea id="copyBox" readonly hidden aria-label="Resultados"></textarea>
+      <p class="note"><span class="ver"></span> <a class="fbl" target="_blank" rel="noopener" hidden></a></p>
+    </div>
   </section>
 
   <section class="panel" id="pSetup" hidden>
@@ -274,12 +303,17 @@ button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
         <button class="btn" id="again" type="button" data-t="again">JUGAR OTRA VEZ</button>
         <button class="btn alt" id="home" type="button" data-t="home">INICIO</button>
       </div>
+      <p class="note"><span class="ver"></span> <a class="fbl" target="_blank" rel="noopener" hidden></a></p>
     </div>
   </section>
 </main>
 
 <script>
 (() => {
+/* ---------- Configuración del piloto ---------- */
+const VERSION = '0.4 piloto';
+const FEEDBACK_URL = '';   // Pega aquí el enlace de tu formulario de opiniones, entre las comillas.
+
 const $ = id => document.getElementById(id);
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -339,6 +373,8 @@ const T = {
     right: '¡CORRECTO!', wrong: 'INCORRECTO', time: '¡TIEMPO!', was: 'Era', next: 'SIGUIENTE', result: 'VER RESULTADO',
     lvl: 'NIVEL', newR: 'Ritmos nuevos: ', less: 'Menos tiempo por caso', case: 'CASO ', end: 'FIN',
     aria: 'Trazo de electrocardiograma en movimiento',
+    progress: 'PROGRESO', copy: 'COPIAR RESULTADOS', copied: 'Copiado. Pégalo en el formulario.', copyFail: 'Selecciona y copia el texto:',
+    feedback: 'Enviar opinión', sumL: ['PARTIDAS', 'RÉCORD', 'PRECISIÓN', 'BIBLIOTECA'], noTry: '–',
     practice: 'PRÁCTICA', library: 'BIBLIOTECA', quit: 'SALIR', back: 'VOLVER', home: 'INICIO',
     pracTitle: 'MODO PRÁCTICA', pracIntro: 'Sin reloj ni vidas. Elige qué ritmos entrenar.',
     selAll: 'Todos', selNone: 'Ninguno', selWeak: 'Mis fallos', pickMin: 'Elige al menos 2 ritmos.', begin: 'EMPEZAR', pracTag: 'PRÁCTICA',
@@ -360,6 +396,8 @@ const T = {
     right: 'CORRECT!', wrong: 'WRONG', time: 'TIME UP!', was: 'It was', next: 'NEXT', result: 'SEE RESULTS',
     lvl: 'LEVEL', newR: 'New rhythms: ', less: 'Less time per case', case: 'CASE ', end: 'END',
     aria: 'Moving electrocardiogram strip',
+    progress: 'PROGRESS', copy: 'COPY RESULTS', copied: 'Copied. Paste it into the form.', copyFail: 'Select and copy the text:',
+    feedback: 'Send feedback', sumL: ['GAMES', 'BEST', 'ACCURACY', 'LIBRARY'], noTry: '–',
     practice: 'PRACTICE', library: 'LIBRARY', quit: 'QUIT', back: 'BACK', home: 'HOME',
     pracTitle: 'PRACTICE MODE', pracIntro: 'No clock, no lives. Choose which rhythms to train.',
     selAll: 'All', selNone: 'None', selWeak: 'My misses', pickMin: 'Pick at least 2 rhythms.', begin: 'START', pracTag: 'PRACTICE',
@@ -396,12 +434,14 @@ const D = {
 };
 
 /* Progreso guardado en el dispositivo: ritmos ya identificados y ritmos que cuestan más */
-let seen = new Set(), weak = {};
+let seen = new Set(), weak = {}, stats = {}, games = 0;
 try {
   seen = new Set(JSON.parse(localStorage.getItem('arr-seen') || '[]').filter(i => R[i]));
   weak = JSON.parse(localStorage.getItem('arr-weak') || '{}') || {};
+  stats = JSON.parse(localStorage.getItem('arr-stats') || '{}') || {};
+  games = parseInt(localStorage.getItem('arr-games') || '0', 10) || 0;
 } catch (e) {}
-const save = () => { try { localStorage.setItem('arr-seen', JSON.stringify([...seen])); localStorage.setItem('arr-weak', JSON.stringify(weak)); } catch (e) {} };
+const save = () => { try { localStorage.setItem('arr-seen', JSON.stringify([...seen])); localStorage.setItem('arr-weak', JSON.stringify(weak)); localStorage.setItem('arr-stats', JSON.stringify(stats)); localStorage.setItem('arr-games', String(games)); } catch (e) {} };
 
 /* ---------- Síntesis del trazo ---------- */
 const FS = 250, DUR = 60;
@@ -577,17 +617,17 @@ function hud() {
   $('lives').innerHTML = [0, 1, 2].map(i => heart(i < lives, brk && i === lives)).join('');
   $('lives').setAttribute('aria-label', lives + tr('livesA'));
 }
-const PAN = { start: 'pStart', game: 'pPlay', practice: 'pPlay', lib: 'pLib', setup: 'pSetup', over: 'pOver' };
+const PAN = { prog: 'pProg', start: 'pStart', game: 'pPlay', practice: 'pPlay', lib: 'pLib', setup: 'pSetup', over: 'pOver' };
 function show(v) {
   const cab = $('cab'); cab.dataset.view = v;
-  ['pStart', 'pPlay', 'pLib', 'pSetup', 'pOver'].forEach(id => { $(id).hidden = id !== PAN[v]; });
+  ['pStart', 'pPlay', 'pLib', 'pSetup', 'pOver', 'pProg'].forEach(id => { $(id).hidden = id !== PAN[v]; });
   cab.classList.toggle('playing', v === 'game' || v === 'practice' || v === 'lib');
   $('pbar').hidden = v !== 'practice';
 }
 function paintPstat() { $('pstat').textContent = tr('pracTag') + ' · ' + pOk + '/' + pTot; }
 const focusNext = () => { try { $('next').focus({ preventScroll: true }); } catch (e) {} };
 function paintCaso() {
-  $('caso').textContent = st === 'start' || st === 'setup' ? 'DEMO' : st === 'over' ? tr('end') : st === 'lib' ? tr('library')
+  $('caso').textContent = st === 'start' || st === 'setup' || st === 'prog' ? 'DEMO' : st === 'over' ? tr('end') : st === 'lib' ? tr('library')
     : mode === 'practice' ? tr('pracTag') : tr('case') + String(caseNo).padStart(2, '0');
 }
 function paintOver() {
@@ -641,6 +681,7 @@ function answer(id) {
   let fresh = false;
   if (right) { if (!seen.has(c0)) { seen.add(c0); fresh = true; } weak[c0] = Math.max(0, (weak[c0] || 0) - 1); }
   else weak[c0] = Math.min(4, (weak[c0] || 0) + 2);
+  const sv = stats[c0] || (stats[c0] = [0, 0]); sv[1]++; if (right) sv[0]++;
   save();
   const unl = () => fresh ? `<span class="unl">${tr('unlocked')} ${sh(c0)}</span>` : '';
   if (right) {
@@ -688,6 +729,7 @@ function rankOf(s) { return tr('ranks')[s < 500 ? 0 : s < 1500 ? 1 : s < 3500 ? 
 function gameOver() {
   st = 'over'; load('asi'); traceBad = true; screenEl.classList.add('bad');
   $('banner').hidden = true; timeLeft = 0; setBar(); paintCaso();
+  games++; save();
   const isRec = score > best;
   if (isRec) { best = score; try { localStorage.setItem('arr-best', String(best)); } catch (e) {} }
   $('rec').hidden = !isRec;
@@ -736,6 +778,32 @@ $('pracBack').addEventListener('click', goHome);
 $('quit').addEventListener('click', goHome);
 $('home').addEventListener('click', goHome);
 
+/* ----- Progreso ----- */
+function totals() { let o = 0, n = 0; IDS.forEach(i => { if (stats[i]) { o += stats[i][0]; n += stats[i][1]; } }); return [o, n]; }
+function paintProg() {
+  const [o, n] = totals(), L = tr('sumL');
+  const vals = [games, pad(best), n ? Math.round(100 * o / n) + '%' : '–', seen.size + '/' + IDS.length];
+  $('progSum').innerHTML = L.map((l, k) => `<div><dt>${l}</dt><dd>${vals[k]}</dd></div>`).join('');
+  $('progList').innerHTML = IDS.map(i => {
+    const v = stats[i] || [0, 0], pc = v[1] ? Math.round(100 * v[0] / v[1]) : 0;
+    return `<div class="prow"><span>${nm(i)}</span><span class="pmeter"><i class="${pc < 50 ? 'low' : pc < 80 ? 'mid' : ''}" style="width:${pc}%"></i></span><span class="pnum">${v[1] ? v[0] + '/' + v[1] + ' · ' + pc + '%' : tr('noTry')}</span></div>`;
+  }).join('');
+}
+function openProg() { st = 'prog'; show('prog'); $('copyMsg').textContent = ''; $('copyBox').hidden = true; paintProg(); paintCaso(); }
+function resultsText() {
+  const [o, n] = totals();
+  return `Arritmia Arcade v${VERSION} (${lang})\n` +
+    `partidas ${games} | record ${best} | precision ${n ? Math.round(100 * o / n) : 0}% (${o}/${n}) | biblioteca ${seen.size}/${IDS.length}\n` +
+    IDS.map(i => i + ' ' + (stats[i] ? stats[i][0] + '/' + stats[i][1] : '0/0')).join(', ');
+}
+$('goProg').addEventListener('click', openProg);
+$('progBack').addEventListener('click', goHome);
+$('copyRes').addEventListener('click', () => {
+  const txt = resultsText(), box = $('copyBox');
+  const fallback = () => { box.value = txt; box.hidden = false; box.focus(); box.select(); $('copyMsg').textContent = tr('copyFail'); };
+  try { navigator.clipboard.writeText(txt).then(() => { $('copyMsg').textContent = tr('copied'); }, fallback); } catch (e) { fallback(); }
+});
+
 /* ----- Biblioteca ----- */
 function paintLib(reload) {
   const id = IDS[libI], open = seen.has(id);
@@ -772,7 +840,7 @@ document.addEventListener('keydown', e => {
     e.preventDefault(); primary();
   } else if (st === 'lib' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
     e.preventDefault(); libStep(e.key === 'ArrowLeft' ? -1 : 1);
-  } else if (e.key === 'Escape' && (st === 'lib' || st === 'setup' || mode === 'practice')) {
+  } else if (e.key === 'Escape' && (st === 'lib' || st === 'setup' || st === 'prog' || mode === 'practice')) {
     goHome();
   }
 });
@@ -786,6 +854,9 @@ function applyLang() {
   if (renderFb) renderFb();
   if (st === 'over') paintOver();
   if (st === 'lib') paintLib(false);
+  if (st === 'prog') paintProg();
+  document.querySelectorAll('.ver').forEach(el => { el.textContent = 'v' + VERSION + (FEEDBACK_URL ? ' ·' : ''); });
+  document.querySelectorAll('.fbl').forEach(el => { el.hidden = !FEEDBACK_URL; el.href = FEEDBACK_URL || '#'; el.textContent = tr('feedback'); });
   if (st === 'setup') paintPicks();
   paintPstat();
   hud();
